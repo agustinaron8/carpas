@@ -289,7 +289,8 @@ function HistorialItem({ r, fotos, pending }: { r: Revision; fotos?: LocalFoto[]
   const faltantes = componentesConFaltante(r);
   return (
     <li className="card">
-      <button className="flex w-full items-center gap-2 px-3 py-2.5 text-left" onClick={() => setOpen(!open)}>
+      <div className="flex items-center">
+      <button className="flex min-w-0 flex-1 items-center gap-2 py-2.5 pl-3 pr-1 text-left" onClick={() => setOpen(!open)}>
         {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         <span className="font-medium">{fechaCorta(r.fecha)}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
@@ -300,6 +301,15 @@ function HistorialItem({ r, fotos, pending }: { r: Revision; fotos?: LocalFoto[]
         </span>
         <PendingBadge info={pending.byId.get(r.id)} compact />
       </button>
+      <Link
+        to={`/revisiones/${r.id}/editar`}
+        className="mr-1.5 shrink-0 rounded-lg p-2.5 text-slate-600 hover:bg-slate-100"
+        aria-label={`Editar revisión del ${fechaCorta(r.fecha)}`}
+        title="Editar revisión"
+      >
+        <Pencil size={18} />
+      </Link>
+      </div>
       {open && (
         <div className="space-y-2 px-3 pb-3">
           <TablaRevision r={r} fotos={fotos} pending={pending} />
