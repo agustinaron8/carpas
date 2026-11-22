@@ -40,6 +40,18 @@ db.version(1).stores({
   meta: 'key',
 });
 
+// v2: fotos de revisión. Las fotos que ya había son de la carpa.
+db.version(2)
+  .stores({ fotos: 'id, carpaId, url, revisionId' })
+  .upgrade((tx) =>
+    tx
+      .table('fotos')
+      .toCollection()
+      .modify((f: LocalFoto) => {
+        f.revisionId ??= null;
+      }),
+  );
+
 export async function getMeta<T>(key: string): Promise<T | undefined> {
   return (await db.meta.get(key))?.value as T | undefined;
 }

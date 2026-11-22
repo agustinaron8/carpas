@@ -3,6 +3,7 @@ import { AlertTriangle, CheckSquare, ClipboardList, FileDown, FileText, Plus, Re
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  componentesConFaltante,
   componentesConProblema,
   ESTADO_GENERAL_LABEL,
   ESTADOS_GENERALES,
@@ -26,6 +27,10 @@ export function tieneProblemas(c: Carpa, ultima: Revision | undefined): boolean 
   return c.estadoGeneral === 'revisar' || c.estadoGeneral === 'reparar' || componentesConProblema(ultima).length > 0;
 }
 
+export function tieneFaltantes(ultima: Revision | undefined): boolean {
+  return componentesConFaltante(ultima).length > 0;
+}
+
 export function Listado() {
   const data = useLiveQuery(async () => {
     const [carpas, ultimas, fotos] = await Promise.all([carpasVivas(), ultimasRevisiones(), db.fotos.toArray()]);
@@ -39,6 +44,7 @@ export function Listado() {
   const [tipo, setTipo] = useState<Tipo | ''>('');
   const [estado, setEstado] = useState<EstadoGeneral | ''>('');
   const [conProblemas, setConProblemas] = useState(false);
+  const [conFaltantes, setConFaltantes] = useState(false);
   const [verBajas, setVerBajas] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -53,9 +59,10 @@ export function Listado() {
       if (estado && c.estadoGeneral !== estado) return false;
       if (!estado && !verBajas && c.estadoGeneral === 'baja') return false;
       if (conProblemas && !tieneProblemas(c, data.ultimas.get(c.id))) return false;
+      if (conFaltantes && !tieneFaltantes(data.ultimas.get(c.id))) return false;
       return true;
     });
-  }, [data, q, tipo, estado, conProblemas, verBajas]);
+  }, [data, q, tipo, estado, conProblemas, conFaltantes, verBajas]);
 
   if (!data) return null;
 
@@ -68,7 +75,7 @@ export function Listado() {
     });
   const todasSeleccionadas = visibles.length > 0 && visibles.every((c) => selected.has(c.id));
   const ids = visibles.filter((c) => selected.has(c.id)).map((c) => c.id);
-  const filtrando = Boolean(q || tipo || estado || conProblemas);
+  const filtrando = Boolean(q || tipo || estado || conProblemas || conFaltantes);
 
   return (
     <div className="space-y-4">
@@ -126,6 +133,12 @@ export function Listado() {
             <AlertTriangle size={14} className="mr-1 inline" />
             Con problemas
           </button>
+          <button
+            className={`rounded-full border px-3 py-1.5 text-sm ${conFaltantes ? 'border-purple-300 bg-purple-50 text-purple-800' : 'border-slate-300 bg-white text-slate-700'}`}
+            onClick={() => setConFaltantes(!conFaltantes)}
+          >
+            Con faltantes
+          </button>
           {!estado && (
             <label className="flex items-center gap-1.5 text-sm text-slate-600">
               <input type="checkbox" checked={verBajas} onChange={(e) => setVerBajas(e.target.checked)} />
@@ -162,6 +175,7 @@ export function Listado() {
           {visibles.map((c) => {
             const ultima = data.ultimas.get(c.id);
             const problemas = componentesConProblema(ultima).length;
+            const faltantes = componentesConFaltante(ultima).length;
             const p = pending.byCarpa.get(c.id);
             const isSel = selected.has(c.id);
             return (
@@ -187,6 +201,7 @@ export function Listado() {
                     <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                       {ultima ? `Revisada ${fechaCorta(ultima.fecha)}` : 'Sin revisiones'}
                       {problemas > 0 && <span className="font-medium text-red-700">· {plural(problemas, 'problema', 'problemas')}</span>}
+                      {faltantes > 0 && <span className="font-medium text-purple-700">· {plural(faltantes, 'faltante', 'faltantes')}</span>}
                       {p && <PendingBadge info={{ error: p.error }} compact />}
                     </span>
                   </span>

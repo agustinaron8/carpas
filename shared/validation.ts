@@ -26,6 +26,8 @@ export const carpaSchema = z.object({
 export const fotoSchema = z.object({
   ...auditable,
   carpaId: z.string().uuid(),
+  // Los clientes anteriores no lo mandan.
+  revisionId: z.string().uuid().nullable().default(null),
   url: z.string().url().max(1000),
   thumbUrl: z.string().url().max(1000),
   orden: z.number().int(),

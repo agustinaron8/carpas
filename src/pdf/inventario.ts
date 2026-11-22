@@ -3,15 +3,15 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 import {
   CAMPOS_TEXTO,
   COMPONENTES,
-  componentesConProblema,
+  componentesConObservaciones,
   ESTADO_GENERAL_LABEL,
   ESTADO_LABEL,
   TIPO_LABEL,
   type Carpa,
   type Revision,
 } from '../../shared/model';
-import { db } from '../db/dexie';
-import { compararCodigo, revisionesDe } from '../db/queries';
+import { db, type LocalFoto } from '../db/dexie';
+import { compararCodigo, fotosPorRevision, revisionesDe } from '../db/queries';
 import { fechaCorta } from '../lib/format';
 import { blobToDataUrl, COLOR_ESTADO, descargar, hoyArchivo } from './common';
 
@@ -24,7 +24,10 @@ export interface InventarioOpts {
 async function fotoDataUrl(carpa: Carpa): Promise<string | null> {
   if (!carpa.fotoPrincipalId) return null;
   const foto = await db.fotos.get(carpa.fotoPrincipalId);
-  if (!foto || foto.deletedAt) return null;
+  return foto && !foto.deletedAt ? dataUrlDe(foto) : null;
+}
+
+async function dataUrlDe(foto: LocalFoto): Promise<string | null> {
   try {
     let blob = foto.thumbBlob ?? foto.blob;
     if (!blob && foto.thumbUrl) {
@@ -66,10 +69,10 @@ function tablaEstado(r: Revision): Content {
 
 function tablaHistorial(revs: Revision[]): Content {
   const body: TableCell[][] = [
-    ['Fecha', 'Tribu / campa', 'Con problemas', 'Observaciones'].map((t) => ({ text: t, bold: true, fillColor: '#f1f5f9' })),
+    ['Fecha', 'Tribu / campa', 'Problemas y faltantes', 'Observaciones'].map((t) => ({ text: t, bold: true, fillColor: '#f1f5f9' })),
   ];
   for (const r of revs) {
-    const problemas = componentesConProblema(r)
+    const problemas = componentesConObservaciones(r)
       .map((k) => {
         const c = COMPONENTES.find((x) => x.key === k)!;
         return `${c.label.split(' ')[0]}: ${ESTADO_LABEL[r[`${k}Estado`]!].toLowerCase()}`;
@@ -115,6 +118,16 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
       },
     ];
     if (ultima) bloque.push({ text: 'Estado actual', bold: true, margin: [0, 4, 0, 2] }, tablaEstado(ultima));
+    if (ultima && opts.fotos) {
+      const fotosRev = ((await fotosPorRevision(c.id)).get(ultima.id) ?? []).slice(0, 4);
+      const imgs = (await Promise.all(fotosRev.map(dataUrlDe))).filter((x): x is string => Boolean(x));
+      if (imgs.length)
+        bloque.push({
+          columns: imgs.map((image) => ({ image, fit: [110, 110] as [number, number], width: 110 })),
+          columnGap: 8,
+          margin: [0, 6, 0, 0],
+        });
+    }
     if (anteriores.length) bloque.push({ text: 'Revisiones anteriores', bold: true, margin: [0, 8, 0, 2] }, tablaHistorial(anteriores));
     content.push({
       stack: bloque,

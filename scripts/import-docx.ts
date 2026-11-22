@@ -121,7 +121,7 @@ async function subirFoto(token: string, carpa: Carpa, bytes: Uint8Array, now: nu
   const id = idDe(`foto:${carpa.nombre}`);
   const url = await subir(token, `fotos/${carpa.id}/${id}.jpg`, full);
   const thumbUrl = await subir(token, `fotos/${carpa.id}/${id}-thumb.jpg`, thumb);
-  return { id, carpaId: carpa.id, url, thumbUrl, orden: 1, createdAt: now, updatedAt: now, deletedAt: null };
+  return { id, carpaId: carpa.id, revisionId: null, url, thumbUrl, orden: 1, createdAt: now, updatedAt: now, deletedAt: null };
 }
 
 async function subir(token: string, pathname: string, data: Buffer): Promise<string> {

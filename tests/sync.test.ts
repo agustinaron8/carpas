@@ -73,4 +73,20 @@ describe('push/pull', () => {
     const cerca = await pull(db, cursor);
     expect(cerca.carpas).toHaveLength(1);
   });
+
+  it('guarda fotos de revisión y acepta fotos de clientes viejos sin revisionId', async () => {
+    const c = carpa();
+    const base = { carpaId: c.id, url: 'https://x.public.blob.vercel-storage.com/a.jpg', thumbUrl: 'https://x.public.blob.vercel-storage.com/a-t.jpg', orden: 1, createdAt: 1, updatedAt: 1, deletedAt: null };
+    const revId = crypto.randomUUID();
+    const vieja = { ...base, id: crypto.randomUUID() };
+    const deRevision = { ...base, id: crypto.randomUUID(), revisionId: revId };
+    const res = await push(db, [
+      { entidad: 'fotos', row: vieja as never },
+      { entidad: 'fotos', row: deRevision as never },
+    ]);
+    expect(res.every((r) => r.ok)).toBe(true);
+    const fotos = (await pull(db, 0)).fotos;
+    expect(fotos.find((f) => f.id === vieja.id)?.revisionId).toBeNull();
+    expect(fotos.find((f) => f.id === deRevision.id)?.revisionId).toBe(revId);
+  });
 });

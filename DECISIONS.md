@@ -14,7 +14,7 @@
 - Zod solo en el servidor: el cliente usa los tipos de `shared/model.ts` y no carga Zod.
 - pdfmake (con fuentes, ~2,7 MB) se carga solo al generar un PDF, pero está en el precache del service worker para que funcione sin señal.
 - Ficha: 1 por A4 vertical por defecto; opción de 2 por A4 apaisada. La columna 1 sale con la última revisión si se elige "Precargar".
-- Revisión: se registra la campa como campo opcional ("Campamento"). No hay fotos por revisión por ahora.
+- Revisión: se registra la campa como campo opcional ("Campamento"). Las fotos de una revisión son fotos con `revisionId`: viajan por la misma cola y no aparecen en la galería de la carpa ni pueden ser su foto principal.
 - El formulario de revisión permite cambiar el estado general de la carpa al final, porque es el momento en que se decide.
 - Por defecto el listado oculta las carpas dadas de baja ("Ver bajas" las muestra).
 - Cerrar sesión no borra los datos del celular; los pendientes se suben al volver a entrar. "Borrar datos locales" sí los pierde, y avisa.
@@ -26,3 +26,5 @@
 - Códigos C-01 a C-33 en el orden del Docs. Los ids salen del nombre, así que reimportar no duplica; las carpas que ya están en el servidor se saltean salvo con `--force`.
 - Las fotos se toman del .docx; dos están rotas en el original (Nahuel 7/8 y G.A) y 11 carpas no tienen foto.
 - Rótulos de la ficha como en la de papel: "Tipo (canadiense o iglú)", "Dirigente de la comisión (revisión)".
+- "Con problemas" = algún componente Regular o Mal, o estado general Revisar/Reparar. "Falta" (ej. no tiene bolsa de estacas) se filtra aparte con "Con faltantes". Los PDFs siguen resaltando todo lo que no está Bien.
+- Deploy en la misma cuenta de Vercel que find-without-signal. La contraseña del grupo vive solo en `APP_PASSWORD` de Vercel.

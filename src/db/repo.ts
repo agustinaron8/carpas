@@ -57,20 +57,33 @@ export async function saveRevision(rev: Revision): Promise<Revision> {
 
 export async function deleteRevision(id: string): Promise<void> {
   const now = Date.now();
-  await db.transaction('rw', db.revisiones, db.outbox, async () => {
+  await db.transaction('rw', db.revisiones, db.fotos, db.outbox, async () => {
     await db.revisiones.update(id, { deletedAt: now, updatedAt: now });
     await enqueue('revisiones', id, now);
+    // Sus fotos se van con ella.
+    for (const f of await db.fotos.where('revisionId').equals(id).toArray()) {
+      if (f.deletedAt) continue;
+      if (!f.url) await db.fotos.delete(f.id);
+      else {
+        await db.fotos.update(f.id, { deletedAt: now, updatedAt: now, blob: undefined, thumbBlob: undefined });
+        await enqueue('fotos', f.id, now);
+      }
+    }
   });
   notify();
 }
 
-/** La foto queda local; el uploader la sube y recién ahí entra al outbox. */
-export async function addFoto(carpaId: string, blob: Blob, thumbBlob: Blob): Promise<LocalFoto> {
+/**
+ * La foto queda local; el uploader la sube y recién ahí entra al outbox.
+ * Con `revisionId` es una foto de esa revisión (ej. del daño) y no cuenta como foto de la carpa.
+ */
+export async function addFoto(carpaId: string, blob: Blob, thumbBlob: Blob, revisionId: string | null = null): Promise<LocalFoto> {
   const now = Date.now();
-  const orden = (await db.fotos.where('carpaId').equals(carpaId).count()) + 1;
+  const orden = (await db.fotos.where('carpaId').equals(carpaId).filter((f) => (f.revisionId ?? null) === revisionId).count()) + 1;
   const foto: LocalFoto = {
     id: uuid(),
     carpaId,
+    revisionId,
     url: '',
     thumbUrl: '',
     orden,
@@ -84,7 +97,7 @@ export async function addFoto(carpaId: string, blob: Blob, thumbBlob: Blob): Pro
   await db.transaction('rw', db.fotos, db.carpas, db.outbox, async () => {
     await db.fotos.put(foto);
     const carpa = await db.carpas.get(carpaId);
-    if (carpa && !carpa.fotoPrincipalId) {
+    if (carpa && !carpa.fotoPrincipalId && !revisionId) {
       await db.carpas.update(carpaId, { fotoPrincipalId: foto.id, updatedAt: now });
       await enqueue('carpas', carpaId, now);
     }
@@ -108,7 +121,7 @@ export async function deleteFoto(id: string): Promise<void> {
     const carpa = await db.carpas.get(foto.carpaId);
     if (carpa?.fotoPrincipalId === id) {
       const otra = (await db.fotos.where('carpaId').equals(foto.carpaId).toArray())
-        .filter((f) => f.id !== id && !f.deletedAt)
+        .filter((f) => f.id !== id && !f.deletedAt && !f.revisionId)
         .sort((a, b) => a.orden - b.orden)[0];
       await db.carpas.update(carpa.id, { fotoPrincipalId: otra?.id ?? null, updatedAt: now });
       await enqueue('carpas', carpa.id, now);

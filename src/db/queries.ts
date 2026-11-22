@@ -40,3 +40,18 @@ export function sugerirCodigo(carpas: Carpa[]): string {
     if (!usados.has(codigo)) return codigo;
   }
 }
+
+/** Fotos de la carpa (sin las de revisiones), en orden. */
+export async function fotosDeCarpa(carpaId: string) {
+  return vivas(await db.fotos.where('carpaId').equals(carpaId).toArray())
+    .filter((f) => !f.revisionId)
+    .sort((a, b) => a.orden - b.orden);
+}
+
+/** Fotos de cada revisión de la carpa, por id de revisión. */
+export async function fotosPorRevision(carpaId: string) {
+  const map = new Map<string, Awaited<ReturnType<typeof fotosDeCarpa>>>();
+  const fotos = vivas(await db.fotos.where('carpaId').equals(carpaId).toArray()).sort((a, b) => a.orden - b.orden);
+  for (const f of fotos) if (f.revisionId) map.set(f.revisionId, [...(map.get(f.revisionId) ?? []), f]);
+  return map;
+}

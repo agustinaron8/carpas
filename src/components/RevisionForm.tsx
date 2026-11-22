@@ -1,4 +1,5 @@
-import { Copy } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Camera, Copy, X } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   CAMPOS_TEXTO,
@@ -14,7 +15,12 @@ import {
   type EstadoGeneral,
   type Revision,
 } from '../../shared/model';
-import { saveCarpa, saveRevision, uuid } from '../db/repo';
+import { db } from '../db/dexie';
+import { addFoto, deleteFoto, saveCarpa, saveRevision, uuid } from '../db/repo';
+import { useObjectUrl } from '../hooks/useObjectUrl';
+import { comprimir } from '../sync/fotos';
+import { FotoImg } from './FotoImg';
+import { useToast } from './Toast';
 import { fechaCorta, hoyISO } from '../lib/format';
 import { ESTADO_COLOR } from './badges';
 
@@ -58,6 +64,27 @@ export function RevisionForm({ carpa, revision, anterior, submitLabel, onSaved, 
   });
   const [estadoGeneral, setEstadoGeneral] = useState<EstadoGeneral>(carpa.estadoGeneral);
   const [saving, setSaving] = useState(false);
+  const [nuevasFotos, setNuevasFotos] = useState<{ blob: Blob; thumbBlob: Blob }[]>([]);
+  const [procesando, setProcesando] = useState(false);
+  const toast = useToast();
+  const fotosGuardadas = useLiveQuery(
+    async () => (await db.fotos.where('revisionId').equals(r.id).toArray()).filter((f) => !f.deletedAt).sort((a, b) => a.orden - b.orden),
+    [r.id],
+  );
+
+  async function onFotos(files: FileList | null) {
+    if (!files?.length) return;
+    setProcesando(true);
+    try {
+      const out: { blob: Blob; thumbBlob: Blob }[] = [];
+      for (const f of Array.from(files)) out.push(await comprimir(f));
+      setNuevasFotos((xs) => [...xs, ...out]);
+    } catch {
+      toast('No se pudo procesar la foto');
+    } finally {
+      setProcesando(false);
+    }
+  }
 
   const patch = (p: Partial<Revision>) => setR((x) => ({ ...x, ...p }));
   const txt = (v: string) => (v.trim() ? v : null);
@@ -74,6 +101,7 @@ export function RevisionForm({ carpa, revision, anterior, submitLabel, onSaved, 
     setSaving(true);
     try {
       const saved = await saveRevision(r);
+      for (const f of nuevasFotos) await addFoto(carpa.id, f.blob, f.thumbBlob, saved.id);
       if (estadoGeneral !== carpa.estadoGeneral) await saveCarpa({ ...carpa, estadoGeneral });
       onSaved(saved);
     } finally {
@@ -176,6 +204,34 @@ export function RevisionForm({ carpa, revision, anterior, submitLabel, onSaved, 
           </div>
         ))}
         <div>
+          <span className="label">
+            Fotos de la revisión <span className="font-normal text-slate-500">(opcional, ej. del daño)</span>
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {fotosGuardadas?.map((f) => (
+              <div key={f.id} className="relative">
+                <FotoImg foto={f} className="size-20 rounded-lg" />
+                <button
+                  type="button"
+                  aria-label="Borrar foto"
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white"
+                  onClick={() => confirm('¿Borrar esta foto?') && void deleteFoto(f.id)}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {nuevasFotos.map((f, i) => (
+              <NuevaFoto key={i} blob={f.thumbBlob} onRemove={() => setNuevasFotos((xs) => xs.filter((_, j) => j !== i))} />
+            ))}
+            <label className={`flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 text-xs text-slate-500 ${procesando ? 'opacity-50' : ''}`}>
+              <Camera size={20} />
+              {procesando ? 'Procesando…' : 'Agregar'}
+              <input type="file" accept="image/*" multiple className="hidden" disabled={procesando} onChange={(e) => void onFotos(e.target.files).then(() => (e.target.value = ''))} />
+            </label>
+          </div>
+        </div>
+        <div>
           <label className="label" htmlFor="campa">
             Campamento <span className="font-normal text-slate-500">(opcional)</span>
           </label>
@@ -200,10 +256,22 @@ export function RevisionForm({ carpa, revision, anterior, submitLabel, onSaved, 
 
       <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         {extraActions}
-        <button className="btn-primary flex-1" disabled={saving}>
+        <button className="btn-primary flex-1" disabled={saving || procesando}>
           {saving ? 'Guardando…' : submitLabel}
         </button>
       </div>
     </form>
+  );
+}
+
+function NuevaFoto({ blob, onRemove }: { blob: Blob; onRemove: () => void }) {
+  const url = useObjectUrl(blob);
+  return (
+    <div className="relative">
+      <img src={url} alt="" className="size-20 rounded-lg object-cover" />
+      <button type="button" onClick={onRemove} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white" aria-label="Quitar">
+        <X size={14} />
+      </button>
+    </div>
   );
 }

@@ -17,7 +17,8 @@ export const ESTADO_GENERAL_LABEL: Record<EstadoGeneral, string> = {
 export const ESTADOS = ['bien', 'regular', 'mal', 'falta'] as const;
 export type Estado = (typeof ESTADOS)[number];
 export const ESTADO_LABEL: Record<Estado, string> = { bien: 'Bien', regular: 'Regular', mal: 'Mal', falta: 'Falta' };
-export const ESTADOS_CON_PROBLEMA: readonly Estado[] = ['regular', 'mal', 'falta'];
+/** "Con problemas": algo está roto o gastado. Lo que falta (ej. la bolsa de estacas) se cuenta aparte. */
+export const ESTADOS_CON_PROBLEMA: readonly Estado[] = ['regular', 'mal'];
 
 /** Componentes revisados, en el orden de la ficha en papel. */
 export const COMPONENTES = [
@@ -60,6 +61,8 @@ export interface Carpa extends Auditable {
 
 export interface Foto extends Auditable {
   carpaId: string;
+  /** Si es una foto de una revisión (ej. del daño). Null: foto de la carpa. */
+  revisionId: string | null;
   url: string;
   thumbUrl: string;
   orden: number;
@@ -108,6 +111,20 @@ export function componentesConProblema(r: Revision | undefined): Componente[] {
   return COMPONENTES.filter((c) => {
     const e = r[`${c.key}Estado`];
     return e !== null && ESTADOS_CON_PROBLEMA.includes(e);
+  }).map((c) => c.key);
+}
+
+export function componentesConFaltante(r: Revision | undefined): Componente[] {
+  if (!r) return [];
+  return COMPONENTES.filter((c) => r[`${c.key}Estado`] === 'falta').map((c) => c.key);
+}
+
+/** Todo lo que no está "bien": problemas y faltantes. Para resaltar en los PDFs. */
+export function componentesConObservaciones(r: Revision | undefined): Componente[] {
+  if (!r) return [];
+  return COMPONENTES.filter((c) => {
+    const e = r[`${c.key}Estado`];
+    return e !== null && e !== 'bien';
   }).map((c) => c.key);
 }
 

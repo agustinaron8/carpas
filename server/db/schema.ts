@@ -39,6 +39,7 @@ export const fotos = pgTable(
   {
     ...auditable,
     carpaId: uuid().notNull(),
+    revisionId: uuid(),
     url: text().notNull(),
     thumbUrl: text().notNull(),
     orden: integer().notNull().default(0),

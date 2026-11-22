@@ -1,0 +1,1 @@
+ALTER TABLE "fotos" ADD COLUMN "revision_id" uuid;

@@ -2,30 +2,30 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Camera, ChevronDown, ChevronRight, ClipboardPlus, FileDown, FileText, Pencil, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CAMPOS_TEXTO, COMPONENTES, componentesConProblema, TIPO_LABEL, type Revision } from '../../shared/model';
+import { CAMPOS_TEXTO, COMPONENTES, componentesConFaltante, componentesConProblema, TIPO_LABEL, type Revision } from '../../shared/model';
 import { EstadoBadge, EstadoGeneralBadge, PendingBadge } from '../components/badges';
 import { FotoImg } from '../components/FotoImg';
 import { FichaDialog, InventarioDialog } from '../components/PdfDialogs';
 import { useToast } from '../components/Toast';
 import { db, type LocalFoto } from '../db/dexie';
-import { revisionesDe, vivas } from '../db/queries';
+import { fotosDeCarpa, fotosPorRevision, revisionesDe } from '../db/queries';
 import { addFoto, deleteFoto, setFotoPrincipal } from '../db/repo';
 import { usePending, type PendingState } from '../hooks/usePending';
-import { fechaCorta } from '../lib/format';
+import { fechaCorta, plural } from '../lib/format';
 import { comprimir } from '../sync/fotos';
 
 export default function CarpaDetalle() {
   const { id = '' } = useParams();
   const data = useLiveQuery(async () => {
     const carpa = await db.carpas.get(id);
-    const fotos = vivas(await db.fotos.where('carpaId').equals(id).toArray()).sort((a, b) => a.orden - b.orden);
-    return { carpa, fotos, revisiones: await revisionesDe(id) };
+    const [fotos, fotosRev, revisiones] = await Promise.all([fotosDeCarpa(id), fotosPorRevision(id), revisionesDe(id)]);
+    return { carpa, fotos, fotosRev, revisiones };
   }, [id]);
   const pending = usePending();
   const [dialog, setDialog] = useState<'ficha' | 'inventario' | null>(null);
 
   if (!data) return null;
-  const { carpa, fotos, revisiones } = data;
+  const { carpa, fotos, fotosRev, revisiones } = data;
   if (!carpa || carpa.deletedAt)
     return (
       <p className="py-8 text-center text-slate-500">
@@ -74,7 +74,7 @@ export default function CarpaDetalle() {
         <h2 className="mb-2 font-semibold">
           Estado actual {ultima && <span className="font-normal text-slate-500">· revisión del {fechaCorta(ultima.fecha)}</span>}
         </h2>
-        {ultima ? <TablaRevision r={ultima} /> : <p className="text-sm text-slate-500">Todavía no tiene revisiones.</p>}
+        {ultima ? <TablaRevision r={ultima} fotos={fotosRev.get(ultima.id)} pending={pending} /> : <p className="text-sm text-slate-500">Todavía no tiene revisiones.</p>}
       </section>
 
       {revisiones.length > 0 && (
@@ -82,7 +82,7 @@ export default function CarpaDetalle() {
           <h2 className="mb-2 font-semibold">Historial ({revisiones.length})</h2>
           <ul className="space-y-2">
             {revisiones.map((r) => (
-              <HistorialItem key={r.id} r={r} pending={pending} />
+              <HistorialItem key={r.id} r={r} fotos={fotosRev.get(r.id)} pending={pending} />
             ))}
           </ul>
         </section>
@@ -165,9 +165,27 @@ function Fotos({ carpaId, principalId, fotos, pending }: { carpaId: string; prin
   );
 }
 
-export function TablaRevision({ r }: { r: Revision }) {
+export function TablaRevision({ r, fotos, pending }: { r: Revision; fotos?: LocalFoto[]; pending?: PendingState }) {
+  const [abierta, setAbierta] = useState<LocalFoto | null>(null);
   return (
     <div className="card divide-y divide-slate-100 text-sm">
+      {fotos && fotos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto px-3 py-2">
+          {fotos.map((f) => (
+            <button key={f.id} type="button" className="relative shrink-0" onClick={() => setAbierta(f)}>
+              <FotoImg foto={f} className="size-20 rounded-lg" />
+              <span className="absolute bottom-1 right-1">
+                <PendingBadge info={pending?.byId.get(f.id)} compact />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {abierta && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/90 p-2" onClick={() => setAbierta(null)}>
+          <FotoImg foto={abierta} full className="max-h-full max-w-full object-contain" />
+        </div>
+      )}
       {COMPONENTES.map((c) => (
         <div key={c.key} className="flex items-start gap-3 px-3 py-2">
           <span className="w-32 shrink-0 text-slate-600">{c.label}</span>
@@ -196,9 +214,10 @@ export function TablaRevision({ r }: { r: Revision }) {
   );
 }
 
-function HistorialItem({ r, pending }: { r: Revision; pending: PendingState }) {
+function HistorialItem({ r, fotos, pending }: { r: Revision; fotos?: LocalFoto[]; pending: PendingState }) {
   const [open, setOpen] = useState(false);
   const problemas = componentesConProblema(r);
+  const faltantes = componentesConFaltante(r);
   return (
     <li className="card">
       <button className="flex w-full items-center gap-2 px-3 py-2.5 text-left" onClick={() => setOpen(!open)}>
@@ -206,13 +225,15 @@ function HistorialItem({ r, pending }: { r: Revision; pending: PendingState }) {
         <span className="font-medium">{fechaCorta(r.fecha)}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
           {[r.tribu, r.campa].filter(Boolean).join(' · ')}
-          {problemas.length > 0 && <span className="text-red-700"> · {problemas.length} con problemas</span>}
+          {problemas.length > 0 && <span className="text-red-700"> · {plural(problemas.length, 'problema', 'problemas')}</span>}
+          {faltantes.length > 0 && <span className="text-purple-700"> · {plural(faltantes.length, 'faltante', 'faltantes')}</span>}
+          {fotos?.length ? <span> · {plural(fotos.length, 'foto', 'fotos')}</span> : null}
         </span>
         <PendingBadge info={pending.byId.get(r.id)} compact />
       </button>
       {open && (
         <div className="space-y-2 px-3 pb-3">
-          <TablaRevision r={r} />
+          <TablaRevision r={r} fotos={fotos} pending={pending} />
           <Link to={`/revisiones/${r.id}/editar`} className="btn-secondary">
             <Pencil size={16} /> Editar revisión
           </Link>

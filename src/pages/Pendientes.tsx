@@ -33,10 +33,10 @@ export default function Pendientes() {
         });
       } else {
         const f = await db.fotos.get(e.entityId);
-        out.push({ id: e.entityId, texto: `${f?.deletedAt ? 'Borrado de foto' : 'Foto'} de ${nombre.get(f?.carpaId ?? '') ?? '?'}`, link: f ? `/carpas/${f.carpaId}` : '/' });
+        out.push({ id: e.entityId, texto: `${f?.deletedAt ? 'Borrado de foto' : 'Foto'}${f?.revisionId ? ' de revisión' : ''} de ${nombre.get(f?.carpaId ?? '') ?? '?'}`, link: f ? `/carpas/${f.carpaId}` : '/' });
       }
     }
-    for (const f of fotos) if (!f.deletedAt) out.push({ id: f.id, texto: `Foto de ${nombre.get(f.carpaId) ?? '?'}`, link: `/carpas/${f.carpaId}` });
+    for (const f of fotos) if (!f.deletedAt) out.push({ id: f.id, texto: `Foto${f.revisionId ? ' de revisión' : ''} de ${nombre.get(f.carpaId) ?? '?'}`, link: `/carpas/${f.carpaId}` });
     return out;
   });
 
