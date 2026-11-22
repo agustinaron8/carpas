@@ -58,15 +58,15 @@ export default function CarpaDetalle() {
 
       {carpa.notas && <p className="whitespace-pre-wrap rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{carpa.notas}</p>}
 
-      <div className="grid grid-cols-3 gap-2">
-        <Link to={`/carpas/${carpa.id}/revision/nueva`} className="btn-primary col-span-3 sm:col-span-1">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <Link to={`/carpas/${carpa.id}/revision/nueva`} className="btn-primary col-span-2 sm:col-span-1">
           <ClipboardPlus size={18} /> Cargar revisión
         </Link>
-        <button className="btn-secondary col-span-3 sm:col-span-1 max-sm:col-span-1 max-sm:px-2" onClick={() => setDialog('ficha')}>
-          <FileText size={18} /> Ficha
+        <button className="btn-secondary px-2" onClick={() => setDialog('ficha')}>
+          <FileText size={18} /> Imprimir ficha
         </button>
-        <button className="btn-secondary col-span-2 sm:col-span-1 max-sm:px-2" onClick={() => setDialog('inventario')}>
-          <FileDown size={18} /> Exportar PDF
+        <button className="btn-secondary px-2" onClick={() => setDialog('inventario')}>
+          <FileDown size={18} /> Exportar a PDF
         </button>
       </div>
 

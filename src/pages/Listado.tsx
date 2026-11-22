@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, CheckSquare, ClipboardList, FileDown, FileText, Plus, RefreshCw, Search, Square, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   componentesConFaltante,
@@ -49,6 +49,8 @@ export function Listado() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<'ficha' | 'inventario' | null>(null);
+  /** Se llegó a la selección desde "Elegir cuáles…": qué acción espera. */
+  const [eligiendoPara, setEligiendoPara] = useState<'ficha' | 'inventario' | null>(null);
 
   const visibles = useMemo(() => {
     if (!data) return [];
@@ -92,6 +94,7 @@ export function Listado() {
             onClick={() => {
               setSelecting(!selecting);
               setSelected(new Set());
+              setEligiendoPara(null);
             }}
           >
             {selecting ? <X size={18} /> : <CheckSquare size={18} />}
@@ -148,6 +151,11 @@ export function Listado() {
         </div>
       </div>
 
+      {selecting && eligiendoPara && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
+          Marcá las carpas y tocá <b>{eligiendoPara === 'ficha' ? 'Imprimir fichas' : 'Exportar inventario'}</b>.
+        </p>
+      )}
       {selecting && (
         <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-sm">
           <button
@@ -179,7 +187,7 @@ export function Listado() {
             const p = pending.byCarpa.get(c.id);
             const isSel = selected.has(c.id);
             return (
-              <li key={c.id}>
+              <li key={c.id} className="min-w-0">
                 <button
                   onClick={() => (selecting ? toggle(c.id) : nav(`/carpas/${c.id}`))}
                   className={`card flex w-full gap-3 p-2 text-left transition ${isSel ? 'border-green-600 ring-2 ring-green-600/30' : ''}`}
@@ -189,8 +197,8 @@ export function Listado() {
                   )}
                   <FotoImg foto={c.fotoPrincipalId ? data.fotos.get(c.fotoPrincipalId) : undefined} className="size-20 shrink-0 rounded-lg" />
                   <span className="min-w-0 flex-1 py-0.5">
-                    <span className="flex items-center gap-2">
-                      <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-white">{c.codigo}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-white">{c.codigo}</span>
                       <span className="truncate font-medium">{c.nombre}</span>
                     </span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
@@ -213,49 +221,88 @@ export function Listado() {
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl gap-2">
+        <div className="mx-auto grid max-w-3xl grid-cols-3 gap-2">
           {selecting ? (
             <>
-              <button className="btn-secondary flex-1 px-2" disabled={!ids.length} onClick={() => setDialog('ficha')}>
-                <FileText size={18} /> Fichas
-              </button>
-              <button className="btn-secondary flex-1 px-2" disabled={!ids.length} onClick={() => setDialog('inventario')}>
-                <FileDown size={18} /> PDF
-              </button>
-              <button className="btn-primary flex-1 px-2" disabled={!ids.length} onClick={() => nav(`/lote?ids=${ids.join(',')}`)}>
-                <ClipboardList size={18} /> Cargar
-              </button>
+              <BotonBarra
+                icon={<FileText size={20} />}
+                label="Imprimir fichas"
+                destacado={eligiendoPara === 'ficha'}
+                disabled={!ids.length}
+                onClick={() => setDialog('ficha')}
+              />
+              <BotonBarra
+                icon={<FileDown size={20} />}
+                label="Exportar inventario"
+                destacado={eligiendoPara === 'inventario'}
+                disabled={!ids.length}
+                onClick={() => setDialog('inventario')}
+              />
+              <BotonBarra
+                icon={<ClipboardList size={20} />}
+                label="Cargar revisiones"
+                disabled={!ids.length}
+                onClick={() => nav(`/lote?ids=${ids.join(',')}`)}
+              />
             </>
           ) : (
             <>
-              <button
-                className="btn-secondary flex-1 px-2"
-                disabled={!visibles.length}
-                onClick={() => {
-                  setSelected(new Set(visibles.map((c) => c.id)));
-                  setDialog('inventario');
-                }}
-              >
-                <FileDown size={18} /> Inventario
-              </button>
-              <Link to="/carpas/nueva" className="btn-primary flex-1 px-2">
-                <Plus size={18} /> Nueva carpa
-              </Link>
+              <BotonBarra icon={<FileDown size={20} />} label="Exportar inventario" disabled={!visibles.length} onClick={() => setDialog('inventario')} />
+              <BotonBarra icon={<FileText size={20} />} label="Imprimir fichas" disabled={!visibles.length} onClick={() => setDialog('ficha')} />
+              <BotonBarra icon={<Plus size={20} />} label="Nueva carpa" destacado onClick={() => nav('/carpas/nueva')} />
             </>
           )}
         </div>
       </div>
 
-      {dialog === 'ficha' && <FichaDialog carpaIds={ids} onClose={() => setDialog(null)} />}
-      {dialog === 'inventario' && (
-        <InventarioDialog
-          carpaIds={ids}
-          onClose={() => {
-            setDialog(null);
-            if (!selecting) setSelected(new Set());
-          }}
-        />
-      )}
+      {dialog && (() => {
+        // Sin selección, "todas" son las que se ven con los filtros actuales.
+        const dialogIds = selecting ? ids : visibles.map((c) => c.id);
+        const alcance = selecting
+          ? undefined
+          : {
+              descripcion: filtrando || visibles.length < data.carpas.length
+                ? `las ${visibles.length} que se ven (con los filtros)`
+                : `todas las carpas (${visibles.length})`,
+              onElegir: () => {
+                setEligiendoPara(dialog);
+                setSelecting(true);
+                setSelected(new Set());
+                setDialog(null);
+              },
+            };
+        const close = () => setDialog(null);
+        return dialog === 'ficha' ? (
+          <FichaDialog carpaIds={dialogIds} alcance={alcance} onClose={close} />
+        ) : (
+          <InventarioDialog carpaIds={dialogIds} alcance={alcance} onClose={close} />
+        );
+      })()}
     </div>
+  );
+}
+
+function BotonBarra({
+  icon,
+  label,
+  onClick,
+  disabled,
+  destacado,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  destacado?: boolean;
+}) {
+  return (
+    <button
+      className={`${destacado ? 'btn-primary' : 'btn-secondary'} h-full flex-col gap-1 px-1 py-2 text-xs leading-tight`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      <span className="text-center">{label}</span>
+    </button>
   );
 }

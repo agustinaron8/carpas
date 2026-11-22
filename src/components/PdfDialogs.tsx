@@ -21,13 +21,37 @@ function useRun() {
   return { busy, run };
 }
 
-export function FichaDialog({ carpaIds, onClose }: { carpaIds: string[]; onClose: () => void }) {
+/**
+ * Desde el listado: el diálogo abre con "todas" y ofrece elegir cuáles, que pasa a la selección múltiple.
+ * `descripcion` dice qué abarca "todas" (ej. "Todas las carpas (33)").
+ */
+export interface Alcance {
+  descripcion: string;
+  onElegir: () => void;
+}
+
+function AlcanceCampo({ alcance, verbo }: { alcance: Alcance; verbo: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-3 py-2 text-sm">
+      <span>
+        <span className="text-slate-500">{verbo}: </span>
+        <span className="font-medium">{alcance.descripcion}</span>
+      </span>
+      <button type="button" className="shrink-0 font-medium text-green-800 underline" onClick={alcance.onElegir}>
+        Elegir cuáles…
+      </button>
+    </div>
+  );
+}
+
+export function FichaDialog({ carpaIds, onClose, alcance }: { carpaIds: string[]; onClose: () => void; alcance?: Alcance }) {
   const [precargar, setPrecargar] = useState(true);
   const [dosPorHoja, setDosPorHoja] = useState(false);
   const { busy, run } = useRun();
   return (
-    <Modal title={carpaIds.length === 1 ? 'Ficha de revisión' : `Fichas de revisión (${carpaIds.length})`} onClose={onClose}>
+    <Modal title={carpaIds.length === 1 ? 'Imprimir ficha de revisión' : 'Imprimir fichas de revisión'} onClose={onClose}>
       <div className="space-y-3">
+        {alcance ? <AlcanceCampo alcance={alcance} verbo="Fichas de" /> : carpaIds.length > 1 && <p className="text-sm text-slate-600">{plural(carpaIds.length, 'carpa', 'carpas')} seleccionadas.</p>}
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-4" checked={precargar} onChange={(e) => setPrecargar(e.target.checked)} />
           <span>
@@ -52,21 +76,22 @@ export function FichaDialog({ carpaIds, onClose }: { carpaIds: string[]; onClose
             }, onClose)
           }
         >
-          {busy ? 'Generando…' : `Generar ${plural(carpaIds.length, 'ficha', 'fichas')}`}
+          {busy ? 'Generando…' : `Descargar ${plural(carpaIds.length, 'ficha', 'fichas')} para imprimir`}
         </button>
       </div>
     </Modal>
   );
 }
 
-export function InventarioDialog({ carpaIds, onClose }: { carpaIds: string[]; onClose: () => void }) {
+export function InventarioDialog({ carpaIds, onClose, alcance }: { carpaIds: string[]; onClose: () => void; alcance?: Alcance }) {
   const [revisiones, setRevisiones] = useState<'ninguna' | 'ultimas' | 'todas'>('ultimas');
   const [ultimasN, setUltimasN] = useState(3);
   const [fotos, setFotos] = useState(true);
   const { busy, run } = useRun();
   return (
-    <Modal title={`Inventario (${plural(carpaIds.length, 'carpa', 'carpas')})`} onClose={onClose}>
+    <Modal title={carpaIds.length === 1 ? 'Exportar a PDF' : 'Exportar inventario'} onClose={onClose}>
       <div className="space-y-4">
+        {alcance ? <AlcanceCampo alcance={alcance} verbo="Incluye" /> : carpaIds.length > 1 && <p className="text-sm text-slate-600">{plural(carpaIds.length, 'carpa', 'carpas')} seleccionadas.</p>}
         <fieldset className="space-y-2">
           <legend className="label">Revisiones anteriores</legend>
           {(
@@ -110,7 +135,7 @@ export function InventarioDialog({ carpaIds, onClose }: { carpaIds: string[]; on
             }, onClose)
           }
         >
-          {busy ? 'Generando…' : 'Exportar PDF'}
+          {busy ? 'Generando…' : 'Descargar PDF'}
         </button>
       </div>
     </Modal>
