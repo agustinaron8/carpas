@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { plural } from '../lib/format';
+import { CheckSquare, Search, Square } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { normalizar, plural } from '../lib/format';
 import { Modal } from './Modal';
 import { useToast } from './Toast';
 
@@ -21,37 +22,136 @@ function useRun() {
   return { busy, run };
 }
 
-/**
- * Desde el listado: el diálogo abre con "todas" y ofrece elegir cuáles, que pasa a la selección múltiple.
- * `descripcion` dice qué abarca "todas" (ej. "Todas las carpas (33)").
- */
-export interface Alcance {
-  descripcion: string;
-  onElegir: () => void;
+export interface CarpaOpcion {
+  id: string;
+  codigo: string;
+  nombre: string;
 }
 
-function AlcanceCampo({ alcance, verbo }: { alcance: Alcance; verbo: string }) {
+/**
+ * Qué carpas entran al PDF. Con `opciones` (desde el listado) el diálogo ofrece "Todas" o "Elegir cuáles",
+ * y la elección se hace ahí mismo. Sin `opciones`, son las `carpaIds` que vienen dadas (una carpa, o la
+ * selección múltiple del listado).
+ */
+interface Props {
+  carpaIds: string[];
+  opciones?: CarpaOpcion[];
+  /** El listado tiene filtros activos: "todas" son las que se ven. */
+  filtrado?: boolean;
+  onClose: () => void;
+}
+
+function useEleccion({ carpaIds, opciones }: Props) {
+  const [modo, setModo] = useState<'todas' | 'algunas'>('todas');
+  const [elegidas, setElegidas] = useState<Set<string>>(new Set());
+  const ids = !opciones ? carpaIds : modo === 'todas' ? opciones.map((o) => o.id) : opciones.filter((o) => elegidas.has(o.id)).map((o) => o.id);
+  return { modo, setModo, elegidas, setElegidas, ids };
+}
+
+function ElegirCarpas({
+  opciones,
+  filtrado,
+  eleccion,
+  que,
+}: {
+  opciones: CarpaOpcion[];
+  filtrado?: boolean;
+  eleccion: ReturnType<typeof useEleccion>;
+  que: string;
+}) {
+  const { modo, setModo, elegidas, setElegidas } = eleccion;
+  const [q, setQ] = useState('');
+  const visibles = useMemo(() => {
+    const nq = normalizar(q.trim());
+    return nq ? opciones.filter((o) => normalizar(`${o.codigo} ${o.nombre}`).includes(nq)) : opciones;
+  }, [opciones, q]);
+  const todasMarcadas = visibles.length > 0 && visibles.every((o) => elegidas.has(o.id));
+  const toggle = (id: string) =>
+    setElegidas((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-3 py-2 text-sm">
-      <span>
-        <span className="text-slate-500">{verbo}: </span>
-        <span className="font-medium">{alcance.descripcion}</span>
-      </span>
-      <button type="button" className="shrink-0 font-medium text-green-800 underline" onClick={alcance.onElegir}>
-        Elegir cuáles…
-      </button>
-    </div>
+    <fieldset className="space-y-2">
+      <legend className="label">{que}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            ['todas', filtrado ? `Todas las del listado (${opciones.length})` : `Todas (${opciones.length})`],
+            ['algunas', 'Elegir cuáles'],
+          ] as const
+        ).map(([v, l]) => (
+          <label
+            key={v}
+            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm ${modo === v ? 'border-green-600 bg-green-50 font-medium text-green-900' : 'border-slate-300'}`}
+          >
+            <input type="radio" name="alcance" className="size-4" checked={modo === v} onChange={() => setModo(v)} />
+            {l}
+          </label>
+        ))}
+      </div>
+      {modo === 'algunas' && (
+        <div className="rounded-lg border border-slate-300">
+          <div className="flex items-center gap-2 border-b border-slate-200 p-2">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input className="input py-1.5 pl-8 text-sm" placeholder="Buscar" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-sm font-medium text-green-800"
+              onClick={() =>
+                setElegidas((s) => {
+                  const n = new Set(s);
+                  for (const o of visibles) {
+                    if (todasMarcadas) n.delete(o.id);
+                    else n.add(o.id);
+                  }
+                  return n;
+                })
+              }
+            >
+              {todasMarcadas ? 'Desmarcar' : 'Marcar'} {q ? 'estas' : 'todas'}
+            </button>
+          </div>
+          <ul className="max-h-60 divide-y divide-slate-100 overflow-y-auto">
+            {visibles.map((o) => (
+              <li key={o.id}>
+                <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm">
+                  <input type="checkbox" className="sr-only" checked={elegidas.has(o.id)} onChange={() => toggle(o.id)} />
+                  <span className="text-green-700">{elegidas.has(o.id) ? <CheckSquare size={18} /> : <Square size={18} />}</span>
+                  <span className="shrink-0 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-white">{o.codigo}</span>
+                  <span className="min-w-0 truncate">{o.nombre}</span>
+                </label>
+              </li>
+            ))}
+            {visibles.length === 0 && <li className="px-3 py-3 text-sm text-slate-500">Ninguna coincide.</li>}
+          </ul>
+          <p className="border-t border-slate-200 px-3 py-1.5 text-xs text-slate-500">{plural(elegidas.size, 'elegida', 'elegidas')}</p>
+        </div>
+      )}
+    </fieldset>
   );
 }
 
-export function FichaDialog({ carpaIds, onClose, alcance }: { carpaIds: string[]; onClose: () => void; alcance?: Alcance }) {
+function Resumen({ ids }: { ids: string[] }) {
+  return ids.length > 1 ? <p className="text-sm text-slate-600">{plural(ids.length, 'carpa seleccionada', 'carpas seleccionadas')}.</p> : null;
+}
+
+export function FichaDialog(props: Props) {
+  const { opciones, filtrado, onClose } = props;
+  const eleccion = useEleccion(props);
+  const { ids } = eleccion;
   const [precargar, setPrecargar] = useState(true);
   const [dosPorHoja, setDosPorHoja] = useState(false);
   const { busy, run } = useRun();
   return (
-    <Modal title={carpaIds.length === 1 ? 'Imprimir ficha de revisión' : 'Imprimir fichas de revisión'} onClose={onClose}>
-      <div className="space-y-3">
-        {alcance ? <AlcanceCampo alcance={alcance} verbo="Fichas de" /> : carpaIds.length > 1 && <p className="text-sm text-slate-600">{plural(carpaIds.length, 'carpa', 'carpas')} seleccionadas.</p>}
+    <Modal title={!opciones && ids.length === 1 ? 'Imprimir ficha de revisión' : 'Imprimir fichas de revisión'} onClose={onClose}>
+      <div className="space-y-4">
+        {opciones ? <ElegirCarpas opciones={opciones} filtrado={filtrado} eleccion={eleccion} que="¿Qué fichas?" /> : <Resumen ids={ids} />}
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-4" checked={precargar} onChange={(e) => setPrecargar(e.target.checked)} />
           <span>
@@ -68,30 +168,33 @@ export function FichaDialog({ carpaIds, onClose, alcance }: { carpaIds: string[]
         </label>
         <button
           className="btn-primary w-full"
-          disabled={busy}
+          disabled={busy || ids.length === 0}
           onClick={() =>
             run(async () => {
               const { generarFichas } = await import('../pdf/ficha');
-              await generarFichas(carpaIds, { precargar, dosPorHoja });
+              await generarFichas(ids, { precargar, dosPorHoja });
             }, onClose)
           }
         >
-          {busy ? 'Generando…' : `Descargar ${plural(carpaIds.length, 'ficha', 'fichas')} para imprimir`}
+          {busy ? 'Generando…' : ids.length === 0 ? 'Elegí al menos una carpa' : `Descargar ${plural(ids.length, 'ficha', 'fichas')} para imprimir`}
         </button>
       </div>
     </Modal>
   );
 }
 
-export function InventarioDialog({ carpaIds, onClose, alcance }: { carpaIds: string[]; onClose: () => void; alcance?: Alcance }) {
+export function InventarioDialog(props: Props) {
+  const { opciones, filtrado, onClose } = props;
+  const eleccion = useEleccion(props);
+  const { ids } = eleccion;
   const [revisiones, setRevisiones] = useState<'ninguna' | 'ultimas' | 'todas'>('ultimas');
   const [ultimasN, setUltimasN] = useState(3);
   const [fotos, setFotos] = useState(true);
   const { busy, run } = useRun();
   return (
-    <Modal title={carpaIds.length === 1 ? 'Exportar a PDF' : 'Exportar inventario'} onClose={onClose}>
+    <Modal title={!opciones && ids.length === 1 ? 'Exportar a PDF' : 'Exportar inventario'} onClose={onClose}>
       <div className="space-y-4">
-        {alcance ? <AlcanceCampo alcance={alcance} verbo="Incluye" /> : carpaIds.length > 1 && <p className="text-sm text-slate-600">{plural(carpaIds.length, 'carpa', 'carpas')} seleccionadas.</p>}
+        {opciones ? <ElegirCarpas opciones={opciones} filtrado={filtrado} eleccion={eleccion} que="¿Qué carpas?" /> : <Resumen ids={ids} />}
         <fieldset className="space-y-2">
           <legend className="label">Revisiones anteriores</legend>
           {(
@@ -124,18 +227,18 @@ export function InventarioDialog({ carpaIds, onClose, alcance }: { carpaIds: str
         </label>
         <button
           className="btn-primary w-full"
-          disabled={busy}
+          disabled={busy || ids.length === 0}
           onClick={() =>
             run(async () => {
               const { generarInventario } = await import('../pdf/inventario');
-              await generarInventario(carpaIds, {
+              await generarInventario(ids, {
                 revisiones: revisiones === 'ninguna' ? 0 : revisiones === 'todas' ? Infinity : ultimasN,
                 fotos,
               });
             }, onClose)
           }
         >
-          {busy ? 'Generando…' : 'Descargar PDF'}
+          {busy ? 'Generando…' : ids.length === 0 ? 'Elegí al menos una carpa' : `Descargar PDF (${plural(ids.length, 'carpa', 'carpas')})`}
         </button>
       </div>
     </Modal>

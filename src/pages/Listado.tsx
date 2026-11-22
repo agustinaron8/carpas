@@ -49,8 +49,6 @@ export function Listado() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<'ficha' | 'inventario' | null>(null);
-  /** Se llegó a la selección desde "Elegir cuáles…": qué acción espera. */
-  const [eligiendoPara, setEligiendoPara] = useState<'ficha' | 'inventario' | null>(null);
 
   const visibles = useMemo(() => {
     if (!data) return [];
@@ -94,7 +92,6 @@ export function Listado() {
             onClick={() => {
               setSelecting(!selecting);
               setSelected(new Set());
-              setEligiendoPara(null);
             }}
           >
             {selecting ? <X size={18} /> : <CheckSquare size={18} />}
@@ -151,11 +148,6 @@ export function Listado() {
         </div>
       </div>
 
-      {selecting && eligiendoPara && (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
-          Marcá las carpas y tocá <b>{eligiendoPara === 'ficha' ? 'Imprimir fichas' : 'Exportar inventario'}</b>.
-        </p>
-      )}
       {selecting && (
         <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-sm">
           <button
@@ -227,14 +219,12 @@ export function Listado() {
               <BotonBarra
                 icon={<FileText size={20} />}
                 label="Imprimir fichas"
-                destacado={eligiendoPara === 'ficha'}
                 disabled={!ids.length}
                 onClick={() => setDialog('ficha')}
               />
               <BotonBarra
                 icon={<FileDown size={20} />}
                 label="Exportar inventario"
-                destacado={eligiendoPara === 'inventario'}
                 disabled={!ids.length}
                 onClick={() => setDialog('inventario')}
               />
@@ -256,27 +246,16 @@ export function Listado() {
       </div>
 
       {dialog && (() => {
-        // Sin selección, "todas" son las que se ven con los filtros actuales.
-        const dialogIds = selecting ? ids : visibles.map((c) => c.id);
-        const alcance = selecting
-          ? undefined
+        // Desde la selección múltiple van las marcadas; si no, el diálogo ofrece todas las del listado o elegir.
+        const props = selecting
+          ? { carpaIds: ids }
           : {
-              descripcion: filtrando || visibles.length < data.carpas.length
-                ? `las ${visibles.length} que se ven (con los filtros)`
-                : `todas las carpas (${visibles.length})`,
-              onElegir: () => {
-                setEligiendoPara(dialog);
-                setSelecting(true);
-                setSelected(new Set());
-                setDialog(null);
-              },
+              carpaIds: [],
+              opciones: visibles.map((c) => ({ id: c.id, codigo: c.codigo, nombre: c.nombre })),
+              filtrado: filtrando || visibles.length < data.carpas.length,
             };
         const close = () => setDialog(null);
-        return dialog === 'ficha' ? (
-          <FichaDialog carpaIds={dialogIds} alcance={alcance} onClose={close} />
-        ) : (
-          <InventarioDialog carpaIds={dialogIds} alcance={alcance} onClose={close} />
-        );
+        return dialog === 'ficha' ? <FichaDialog {...props} onClose={close} /> : <InventarioDialog {...props} onClose={close} />;
       })()}
     </div>
   );
