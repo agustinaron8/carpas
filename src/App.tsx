@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './components/Toast';
 import { getToken } from './lib/api';
@@ -17,6 +17,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const loc = useLocation();
   if (!getToken()) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
   return <>{children}</>;
+}
+
+/** Link corto del QR de una ficha → cargar la revisión de esa carpa. */
+function DesdeQr() {
+  const { id = '' } = useParams();
+  return <Navigate to={`/carpas/${id}/revision/nueva`} replace />;
 }
 
 export function App() {
@@ -39,6 +45,7 @@ export function App() {
               <Route path="carpas/:id/editar" element={<CarpaEditar />} />
               <Route path="carpas/:id/revision/nueva" element={<RevisionPage />} />
               <Route path="revisiones/:revisionId/editar" element={<RevisionPage />} />
+              <Route path="r/:id" element={<DesdeQr />} />
               <Route path="lote" element={<Lote />} />
               <Route path="pendientes" element={<Pendientes />} />
               <Route path="ajustes" element={<Ajustes />} />

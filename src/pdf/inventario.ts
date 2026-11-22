@@ -12,7 +12,7 @@ import {
 } from '../../shared/model';
 import { db, type LocalFoto } from '../db/dexie';
 import { compararCodigo, fotosPorRevision, revisionesDe } from '../db/queries';
-import { fechaCorta } from '../lib/format';
+import { fechaCorta, plural } from '../lib/format';
 import { blobToDataUrl, COLOR_ESTADO, descargar, hoyArchivo } from './common';
 
 export interface InventarioOpts {
@@ -87,7 +87,7 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
   const carpas = (await db.carpas.bulkGet(carpaIds)).filter((c): c is Carpa => Boolean(c && !c.deletedAt)).sort(compararCodigo);
   const content: Content[] = [
     { text: 'Inventario de carpas', fontSize: 18, bold: true },
-    { text: `${carpas.length} carpas · ${fechaCorta(hoyArchivo())}`, color: '#64748b', margin: [0, 2, 0, 12] },
+    { text: `${plural(carpas.length, 'carpa', 'carpas')} · ${fechaCorta(hoyArchivo())}`, color: '#64748b', margin: [0, 2, 0, 12] },
   ];
   for (const [i, c] of carpas.entries()) {
     const revs = await revisionesDe(c.id);

@@ -18,8 +18,11 @@ function BotonVolver() {
     <button
       className="-ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border border-green-600 bg-green-50 py-1.5 pl-2 pr-3 text-sm font-semibold text-green-800 active:scale-95"
       aria-label="Volver"
-      // Con historial dentro de la app, vuelve como el gesto; si no, a la pantalla de arriba.
-      onClick={() => (loc.key !== 'default' ? nav(-1) : nav(pantallaAnterior(loc.pathname), { replace: true }))}
+      // React Router guarda en history.state.idx cuántas pantallas de la app hay atrás (las redirecciones
+      // no suman). En 0 no hay a dónde volver dentro de la app: se va a la pantalla de arriba.
+      onClick={() =>
+        ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0 ? nav(-1) : nav(pantallaAnterior(loc.pathname), { replace: true })
+      }
     >
       <ArrowLeft size={20} strokeWidth={2.5} />
       Volver

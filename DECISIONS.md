@@ -38,3 +38,6 @@
 - Botón "Volver" (flecha + texto, borde verde) arriba a la izquierda, en lugar del logo, en todas las pantallas salvo el listado: con historial dentro de la app hace lo mismo que el gesto; si se entró directo (ej. link del QR de una ficha), va a la pantalla de arriba (formulario → carpa → listado).
 - Acciones del listado con nombres que dicen qué hacen: "Exportar inventario", "Imprimir fichas", "Nueva carpa" (y en selección, "Cargar revisiones"). Inventario y fichas se eligen dentro del mismo diálogo: "Todas" o "Elegir cuáles" (lista con casillas y buscador), sin salir del listado. La selección múltiple del listado ("Seleccionar") sigue para cargar revisiones en lote.
 - Cada ficha ocupa siempre una hoja (o media en "2 por hoja"): los textos precargados se achican (9 → 8 → 7 pt) y, si igual no entran, se cortan con "…"; el texto completo está en la app. En "2 por hoja" también se achica el espacio interno de las celdas.
+- QR de la ficha: link corto `/r/:id` (redirige a cargar la revisión) y QR más grande, para que se lea bien impreso y en "2 por hoja". Los links largos de fichas ya impresas siguen andando.
+- PDFs en iPhone: se ofrece el menú de compartir (Archivos, imprimir, WhatsApp) porque en la app instalada la descarga a veces no hace nada; si no está disponible, se descarga.
+- Fecha de los PDFs y de los nombres de archivo en hora local, no UTC.

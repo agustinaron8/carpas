@@ -65,7 +65,8 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
           {
             width: 'auto',
             stack: [
-              { qr: `${origin}/carpas/${carpa.id}/revision/nueva`, fit: 76 * escala, alignment: 'right' },
+              // Link corto (/r/:id) = QR con menos módulos, más fácil de leer impreso. Lo resuelve App.tsx.
+              { qr: `${origin}/r/${carpa.id}`, fit: 96 * escala, alignment: 'right' },
               { text: 'Escaneá para cargarla', fontSize: fs(7), color: '#64748b', alignment: 'right', margin: [0, 2, 0, 0] },
             ],
           },
