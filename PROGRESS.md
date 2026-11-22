@@ -27,6 +27,8 @@ En producción (22/11): login, 33 carpas con fotos, revisión con foto subida de
 
 - Entrar sin señal en un celular que ya entró antes (también después de cerrar sesión), y renovación automática de la sesión: probados en Chromium.
 
+Revisión de exports (22/11), en local y en producción, abriendo cada PDF y verificando su contenido: inventario (todas, solo estado actual, sin fotos, elegidas, con filtro, una carpa con todo el historial y fotos de revisión), fichas (todas, sin precarga, 2 por hoja, selección, carpa sin revisiones, textos extremos). Los QR se leen con un lector automático y llevan a la carpa correcta. Sin conexión: inventario con fotos y fichas.
+
 ## Falta
 - Hito 9: probar en un celular real en modo avión, Lighthouse.
 - A decidir al probar la app: deslizar para actualizar, y Background Sync en Android.
