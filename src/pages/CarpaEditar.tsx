@@ -2,10 +2,25 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Camera, Trash2, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ESTADO_GENERAL_LABEL, ESTADOS_GENERALES, TIPO_LABEL, TIPOS, type Carpa, type EstadoGeneral, type Tipo } from '../../shared/model';
+import {
+  CAMPOS_ESTADO,
+  ESTADO_GENERAL_LABEL,
+  estadoActual,
+  estadoDe,
+  ESTADOS_GENERALES,
+  revisionVacia,
+  TIPO_LABEL,
+  TIPOS,
+  type Carpa,
+  type EstadoComponentes,
+  type EstadoGeneral,
+  type Tipo,
+} from '../../shared/model';
+import { ComponentesEditor } from '../components/ComponentesEditor';
 import { useToast } from '../components/Toast';
 import { db } from '../db/dexie';
-import { carpasVivas, sugerirCodigo } from '../db/queries';
+import { carpasVivas, sugerirCodigo, ultimaRevision } from '../db/queries';
+import { fechaCorta } from '../lib/format';
 import { addFoto, deleteCarpa, saveCarpa, uuid } from '../db/repo';
 import { usePending } from '../hooks/usePending';
 import { useObjectUrl } from '../hooks/useObjectUrl';
@@ -26,6 +41,10 @@ export default function CarpaEditar() {
   const toast = useToast();
   const pending = usePending();
   const existente = useLiveQuery(() => (id ? db.carpas.get(id) : undefined), [id]);
+  // null = cargada y sin revisiones; undefined = todavía cargando.
+  const ultima = useLiveQuery(async () => (id ? ((await ultimaRevision(id)) ?? null) : null), [id]);
+  const [estado, setEstado] = useState<EstadoComponentes | null>(null);
+  const [estadoInicial, setEstadoInicial] = useState<EstadoComponentes | null>(null);
   const todas = useLiveQuery(carpasVivas);
   const [form, setForm] = useState<FormState | null>(null);
   const [fotos, setFotos] = useState<{ blob: Blob; thumbBlob: Blob }[]>([]);
@@ -33,8 +52,12 @@ export default function CarpaEditar() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (form || !todas) return;
+    if (form || !todas || ultima === undefined) return;
     if (id && !existente) return;
+    const inicial = existente ? estadoActual(existente, ultima ?? undefined)?.estado : undefined;
+    const e = inicial ? estadoDe(inicial) : estadoDe(revisionVacia('', '', 0, ''));
+    setEstado(e);
+    setEstadoInicial(e);
     setForm(
       existente
         ? {
@@ -47,15 +70,16 @@ export default function CarpaEditar() {
           }
         : { codigo: sugerirCodigo(todas), nombre: '', tipo: 'canadiense', capacidad: '', estadoGeneral: 'lista', notas: '' },
     );
-  }, [form, todas, existente, id]);
+  }, [form, todas, existente, id, ultima]);
 
-  if (!form || !todas) return null;
+  if (!form || !todas || !estado || !estadoInicial) return null;
+  const actual = existente ? estadoActual(existente, ultima ?? undefined) : undefined;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm({ ...form, [k]: v });
   const syncError = id ? pending.byId.get(id)?.error : null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!form || !todas) return;
+    if (!form || !todas || !estado || !estadoInicial) return;
     const codigo = form.codigo.trim().toUpperCase();
     if (todas.some((c) => c.codigo.toUpperCase() === codigo && c.id !== id)) {
       setError(`Ya hay una carpa con el código ${codigo}.`);
@@ -73,6 +97,12 @@ export default function CarpaEditar() {
       notas: form.notas.trim() || null,
       fotoPrincipalId: existente?.fotoPrincipalId ?? null,
     };
+    // El estado solo se guarda como edición a mano si cambió (si no, sigue mandando la última revisión).
+    const cambioEstado = CAMPOS_ESTADO.some((k) => (estado[k] ?? null) !== (estadoInicial[k] ?? null));
+    if (cambioEstado) {
+      carpa.estadoActual = estado;
+      carpa.estadoActualEn = Date.now();
+    }
     await saveCarpa(carpa);
     for (const f of fotos) await addFoto(carpa.id, f.blob, f.thumbBlob);
     toast(existente ? 'Cambios guardados' : 'Carpa creada');
@@ -105,6 +135,7 @@ export default function CarpaEditar() {
     <form onSubmit={submit} className="space-y-4">
       <h1 className="text-xl font-semibold">{existente ? 'Editar carpa' : 'Nueva carpa'}</h1>
       {syncError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">No se pudo subir: {syncError}</p>}
+      <h2 className="border-b border-slate-200 pb-1 text-base font-semibold text-green-800">Datos de la carpa</h2>
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="label" htmlFor="codigo">
@@ -175,8 +206,18 @@ export default function CarpaEditar() {
           </div>
         </div>
       )}
+      <div className="space-y-2 pt-2">
+        <h2 className="border-b border-slate-200 pb-1 text-base font-semibold text-green-800">Estado actual</h2>
+        <p className="text-sm text-slate-600">
+          {actual
+            ? `Ahora: ${actual.fuente === 'manual' ? 'editado el' : 'revisión del'} ${fechaCorta(actual.fecha)}. `
+            : 'Todavía no tiene revisiones. '}
+          Si cambiás algo, queda como el estado actual sin crear una revisión.
+        </p>
+        <ComponentesEditor valor={estado} onChange={(p) => setEstado((e) => (e ? { ...e, ...p } : e))} />
+      </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
-      <div className="flex gap-2">
+      <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         <button type="button" className="btn-secondary flex-1" onClick={() => nav(-1)}>
           Cancelar
         </button>
