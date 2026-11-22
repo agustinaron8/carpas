@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   componentesConFaltante,
   componentesConProblema,
+  estadoActual,
   ESTADO_GENERAL_LABEL,
   ESTADOS_GENERALES,
   TIPO_LABEL,
@@ -24,11 +25,11 @@ import { fechaCorta, normalizar, plural } from '../lib/format';
 import { syncNow, useSyncState } from '../sync/syncService';
 
 export function tieneProblemas(c: Carpa, ultima: Revision | undefined): boolean {
-  return c.estadoGeneral === 'revisar' || c.estadoGeneral === 'reparar' || componentesConProblema(ultima).length > 0;
+  return c.estadoGeneral === 'revisar' || c.estadoGeneral === 'reparar' || componentesConProblema(estadoActual(c, ultima)?.estado).length > 0;
 }
 
-export function tieneFaltantes(ultima: Revision | undefined): boolean {
-  return componentesConFaltante(ultima).length > 0;
+export function tieneFaltantes(c: Carpa, ultima: Revision | undefined): boolean {
+  return componentesConFaltante(estadoActual(c, ultima)?.estado).length > 0;
 }
 
 export function Listado() {
@@ -59,7 +60,7 @@ export function Listado() {
       if (estado && c.estadoGeneral !== estado) return false;
       if (!estado && !verBajas && c.estadoGeneral === 'baja') return false;
       if (conProblemas && !tieneProblemas(c, data.ultimas.get(c.id))) return false;
-      if (conFaltantes && !tieneFaltantes(data.ultimas.get(c.id))) return false;
+      if (conFaltantes && !tieneFaltantes(c, data.ultimas.get(c.id))) return false;
       return true;
     });
   }, [data, q, tipo, estado, conProblemas, conFaltantes, verBajas]);
@@ -174,8 +175,9 @@ export function Listado() {
         <ul className="grid gap-3 sm:grid-cols-2">
           {visibles.map((c) => {
             const ultima = data.ultimas.get(c.id);
-            const problemas = componentesConProblema(ultima).length;
-            const faltantes = componentesConFaltante(ultima).length;
+            const actual = estadoActual(c, ultima);
+            const problemas = componentesConProblema(actual?.estado).length;
+            const faltantes = componentesConFaltante(actual?.estado).length;
             const p = pending.byCarpa.get(c.id);
             const isSel = selected.has(c.id);
             return (
@@ -199,7 +201,7 @@ export function Listado() {
                       {c.capacidad ? <span>· {c.capacidad} pers.</span> : null}
                     </span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                      {ultima ? `Revisada ${fechaCorta(ultima.fecha)}` : 'Sin revisiones'}
+                      {!actual ? 'Sin revisiones' : actual.fuente === 'manual' ? `Actualizada ${fechaCorta(actual.fecha)}` : `Revisada ${fechaCorta(actual.fecha)}`}
                       {problemas > 0 && <span className="font-medium text-red-700">· {plural(problemas, 'problema', 'problemas')}</span>}
                       {faltantes > 0 && <span className="font-medium text-purple-700">· {plural(faltantes, 'faltante', 'faltantes')}</span>}
                       {p && <PendingBadge info={{ error: p.error }} compact />}

@@ -1,0 +1,474 @@
+{
+  "id": "a4085ff6-0760-414b-a628-db94eb13797b",
+  "prevId": "6d65835f-1dee-4c75-8351-65e779e2a451",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.carpas": {
+      "name": "carpas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "server_updated_at": {
+          "name": "server_updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(extract(epoch from clock_timestamp()) * 1000)::bigint"
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "capacidad": {
+          "name": "capacidad",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_general": {
+          "name": "estado_general",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notas": {
+          "name": "notas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "foto_principal_id": {
+          "name": "foto_principal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_actual": {
+          "name": "estado_actual",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_actual_en": {
+          "name": "estado_actual_en",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "carpas_codigo_vivo": {
+          "name": "carpas_codigo_vivo",
+          "columns": [
+            {
+              "expression": "codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"carpas\".\"deleted_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "carpas_sync": {
+          "name": "carpas_sync",
+          "columns": [
+            {
+              "expression": "server_updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fotos": {
+      "name": "fotos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "server_updated_at": {
+          "name": "server_updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(extract(epoch from clock_timestamp()) * 1000)::bigint"
+        },
+        "carpa_id": {
+          "name": "carpa_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision_id": {
+          "name": "revision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thumb_url": {
+          "name": "thumb_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "fotos_carpa": {
+          "name": "fotos_carpa",
+          "columns": [
+            {
+              "expression": "carpa_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fotos_sync": {
+          "name": "fotos_sync",
+          "columns": [
+            {
+              "expression": "server_updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.revisiones": {
+      "name": "revisiones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "server_updated_at": {
+          "name": "server_updated_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(extract(epoch from clock_timestamp()) * 1000)::bigint"
+        },
+        "carpa_id": {
+          "name": "carpa_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha": {
+          "name": "fecha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bolsa_estado": {
+          "name": "bolsa_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bolsa_nota": {
+          "name": "bolsa_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cuerpo_estado": {
+          "name": "cuerpo_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cuerpo_nota": {
+          "name": "cuerpo_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cierres_estado": {
+          "name": "cierres_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cierres_nota": {
+          "name": "cierres_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parantes_estado": {
+          "name": "parantes_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parantes_nota": {
+          "name": "parantes_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estacas_cantidad": {
+          "name": "estacas_cantidad",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estacas_estado": {
+          "name": "estacas_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estacas_nota": {
+          "name": "estacas_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vientos_estado": {
+          "name": "vientos_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vientos_nota": {
+          "name": "vientos_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sobretecho_estado": {
+          "name": "sobretecho_estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sobretecho_nota": {
+          "name": "sobretecho_nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cantidad_personas": {
+          "name": "cantidad_personas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tribu": {
+          "name": "tribu",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dirigente_tribu": {
+          "name": "dirigente_tribu",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dirigente_comision": {
+          "name": "dirigente_comision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observaciones": {
+          "name": "observaciones",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "campa": {
+          "name": "campa",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "revisiones_carpa": {
+          "name": "revisiones_carpa",
+          "columns": [
+            {
+              "expression": "carpa_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fecha",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "revisiones_sync": {
+          "name": "revisiones_sync",
+          "columns": [
+            {
+              "expression": "server_updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

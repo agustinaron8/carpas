@@ -4,10 +4,12 @@ import {
   CAMPOS_TEXTO,
   COMPONENTES,
   componentesConObservaciones,
+  estadoActual,
   ESTADO_GENERAL_LABEL,
   ESTADO_LABEL,
   TIPO_LABEL,
   type Carpa,
+  type EstadoComponentes,
   type Revision,
 } from '../../shared/model';
 import { db, type LocalFoto } from '../db/dexie';
@@ -43,7 +45,8 @@ async function dataUrlDe(foto: LocalFoto): Promise<string | null> {
   }
 }
 
-function tablaEstado(r: Revision): Content {
+/** Componentes del estado actual (`e`) y textos de la última revisión (`r`), si hay. */
+function tablaEstado(e: EstadoComponentes, r: Revision | undefined): Content {
   const body: TableCell[][] = [
     [
       { text: 'Componente', bold: true, fillColor: '#f1f5f9' },
@@ -52,18 +55,20 @@ function tablaEstado(r: Revision): Content {
     ],
   ];
   for (const c of COMPONENTES) {
-    const e = r[`${c.key}Estado`];
-    const cant = c.key === 'estacas' && r.estacasCantidad !== null ? `${r.estacasCantidad}${e ? ' · ' : ''}` : '';
+    const est = e[`${c.key}Estado`];
+    const cant = c.key === 'estacas' && e.estacasCantidad !== null ? `${e.estacasCantidad}${est ? ' · ' : ''}` : '';
     body.push([
       c.label,
-      { text: cant + (e ? ESTADO_LABEL[e] : cant ? '' : '—'), fillColor: e && e !== 'bien' ? COLOR_ESTADO[e] : undefined, bold: Boolean(e && e !== 'bien') },
-      r[`${c.key}Nota`] ?? '',
+      { text: cant + (est ? ESTADO_LABEL[est] : cant ? '' : '—'), fillColor: est && est !== 'bien' ? COLOR_ESTADO[est] : undefined, bold: Boolean(est && est !== 'bien') },
+      e[`${c.key}Nota`] ?? '',
     ]);
   }
-  for (const t of CAMPOS_TEXTO) {
-    if (r[t.key]) body.push([t.label, { text: r[t.key]!, colSpan: 2 }, '']);
+  if (r) {
+    for (const t of CAMPOS_TEXTO) {
+      if (r[t.key]) body.push([t.label, { text: r[t.key]!, colSpan: 2 }, '']);
+    }
+    if (r.campa) body.push(['Campamento', { text: r.campa, colSpan: 2 }, '']);
   }
-  if (r.campa) body.push(['Campamento', { text: r.campa, colSpan: 2 }, '']);
   return { table: { widths: [130, 80, '*'], body }, layout: 'lightHorizontalLines', fontSize: 9 };
 }
 
@@ -92,6 +97,7 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
   for (const [i, c] of carpas.entries()) {
     const revs = await revisionesDe(c.id);
     const ultima = revs[0];
+    const actual = estadoActual(c, ultima);
     const anteriores = opts.revisiones > 0 ? revs.slice(1, 1 + opts.revisiones) : [];
     const img = opts.fotos ? await fotoDataUrl(c) : null;
     const datos: Content = {
@@ -107,7 +113,14 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
           margin: [0, 3, 0, 0],
         },
         c.notas ? { text: c.notas, italics: true, color: '#92400e', margin: [0, 4, 0, 0] } : { text: '' },
-        { text: ultima ? `Última revisión: ${fechaCorta(ultima.fecha)}` : 'Sin revisiones', color: '#64748b', margin: [0, 4, 0, 0] },
+        {
+          text: [
+            ultima ? `Última revisión: ${fechaCorta(ultima.fecha)}` : 'Sin revisiones',
+            actual?.fuente === 'manual' ? ` · Estado actualizado el ${fechaCorta(actual.fecha)}` : '',
+          ],
+          color: '#64748b',
+          margin: [0, 4, 0, 0],
+        },
       ],
     };
     const bloque: Content[] = [
@@ -117,7 +130,7 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
         margin: [0, 0, 0, 6],
       },
     ];
-    if (ultima) bloque.push({ text: 'Estado actual', bold: true, margin: [0, 4, 0, 2] }, tablaEstado(ultima));
+    if (actual) bloque.push({ text: 'Estado actual', bold: true, margin: [0, 4, 0, 2] }, tablaEstado(actual.estado, ultima));
     if (ultima && opts.fotos) {
       const fotosRev = ((await fotosPorRevision(c.id)).get(ultima.id) ?? []).slice(0, 4);
       const imgs = (await Promise.all(fotosRev.map(dataUrlDe))).filter((x): x is string => Boolean(x));

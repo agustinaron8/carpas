@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { Revision } from '../../shared/model';
+import { estadoActual, type Revision } from '../../shared/model';
 import { RevisionForm } from '../components/RevisionForm';
 import { db } from '../db/dexie';
 import { compararCodigo, ultimaRevision } from '../db/queries';
@@ -19,6 +19,7 @@ export default function Lote() {
   const carpas = useLiveQuery(async () => (await db.carpas.bulkGet(ids)).filter((c) => c && !c.deletedAt).map((c) => c!).sort(compararCodigo), [ids]);
   const actual = carpas?.[i];
   const anterior = useLiveQuery(async () => (actual ? ((await ultimaRevision(actual.id)) ?? null) : null), [actual?.id]);
+  const previo = actual && anterior !== undefined ? estadoActual(actual, anterior ?? undefined) : undefined;
 
   if (!carpas) return null;
   if (i >= carpas.length)
@@ -53,7 +54,7 @@ export default function Lote() {
       <RevisionForm
         key={actual.id}
         carpa={actual}
-        anterior={anterior ?? undefined}
+        previo={previo}
         defaults={defaults}
         submitLabel={i + 1 < carpas.length ? 'Guardar y siguiente' : 'Guardar y terminar'}
         onSaved={(r) => {

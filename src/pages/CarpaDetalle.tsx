@@ -2,14 +2,27 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Camera, ChevronDown, ChevronRight, ClipboardPlus, FileDown, FileText, Pencil, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CAMPOS_TEXTO, COMPONENTES, componentesConFaltante, componentesConProblema, TIPO_LABEL, type Revision } from '../../shared/model';
+import {
+  CAMPOS_TEXTO,
+  COMPONENTES,
+  componentesConFaltante,
+  componentesConProblema,
+  estadoActual,
+  estadoDe,
+  revisionVacia,
+  TIPO_LABEL,
+  type Carpa,
+  type EstadoComponentes,
+  type Revision,
+} from '../../shared/model';
+import { ComponentesEditor } from '../components/ComponentesEditor';
 import { EstadoBadge, EstadoGeneralBadge, PendingBadge } from '../components/badges';
 import { FotoImg } from '../components/FotoImg';
 import { FichaDialog, InventarioDialog } from '../components/PdfDialogs';
 import { useToast } from '../components/Toast';
 import { db, type LocalFoto } from '../db/dexie';
 import { fotosDeCarpa, fotosPorRevision, revisionesDe } from '../db/queries';
-import { addFoto, deleteFoto, setFotoPrincipal } from '../db/repo';
+import { addFoto, deleteFoto, saveCarpa, setFotoPrincipal } from '../db/repo';
 import { usePending, type PendingState } from '../hooks/usePending';
 import { fechaCorta, plural } from '../lib/format';
 import { comprimir } from '../sync/fotos';
@@ -70,12 +83,7 @@ export default function CarpaDetalle() {
         </button>
       </div>
 
-      <section>
-        <h2 className="mb-2 font-semibold">
-          Estado actual {ultima && <span className="font-normal text-slate-500">· revisión del {fechaCorta(ultima.fecha)}</span>}
-        </h2>
-        {ultima ? <TablaRevision r={ultima} fotos={fotosRev.get(ultima.id)} pending={pending} /> : <p className="text-sm text-slate-500">Todavía no tiene revisiones.</p>}
-      </section>
+      <EstadoActualSeccion carpa={carpa} ultima={ultima} fotos={ultima ? fotosRev.get(ultima.id) : undefined} pending={pending} />
 
       {revisiones.length > 0 && (
         <section>
@@ -165,8 +173,69 @@ function Fotos({ carpaId, principalId, fotos, pending }: { carpaId: string; prin
   );
 }
 
-export function TablaRevision({ r, fotos, pending }: { r: Revision; fotos?: LocalFoto[]; pending?: PendingState }) {
+/** Estado actual: editable a mano, sin cargar una revisión. Muestra lo más nuevo (edición o última revisión). */
+function EstadoActualSeccion({ carpa, ultima, fotos, pending }: { carpa: Carpa; ultima?: Revision; fotos?: LocalFoto[]; pending: PendingState }) {
+  const toast = useToast();
+  const actual = estadoActual(carpa, ultima);
+  const [borrador, setBorrador] = useState<EstadoComponentes | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const editar = () => setBorrador(actual ? estadoDe(actual.estado) : estadoDe(revisionVacia(carpa.id, '', 0, '')));
+
+  async function guardar() {
+    if (!borrador) return;
+    setGuardando(true);
+    try {
+      await saveCarpa({ ...carpa, estadoActual: borrador, estadoActualEn: Date.now() });
+      toast('Estado actualizado');
+      setBorrador(null);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">
+          Estado actual{' '}
+          {actual && (
+            <span className="font-normal text-slate-500">
+              · {actual.fuente === 'manual' ? 'editado el' : 'revisión del'} {fechaCorta(actual.fecha)}
+            </span>
+          )}
+        </h2>
+        {!borrador && (
+          <button className="btn-secondary shrink-0 px-3 py-1.5" onClick={editar}>
+            <Pencil size={14} /> Editar estado
+          </button>
+        )}
+      </div>
+      {borrador ? (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">Cambiá lo que haga falta. No se crea una revisión nueva: queda como el estado actual de la carpa.</p>
+          <ComponentesEditor valor={borrador} onChange={(p) => setBorrador((b) => (b ? { ...b, ...p } : b))} />
+          <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+            <button className="btn-secondary flex-1" onClick={() => setBorrador(null)}>
+              Cancelar
+            </button>
+            <button className="btn-primary flex-1" disabled={guardando} onClick={() => void guardar()}>
+              {guardando ? 'Guardando…' : 'Guardar estado'}
+            </button>
+          </div>
+        </div>
+      ) : actual ? (
+        <TablaRevision r={ultima} estado={actual.estado} fotos={fotos} pending={pending} />
+      ) : (
+        <p className="text-sm text-slate-500">Todavía no tiene revisiones. Podés cargar el estado con "Editar".</p>
+      )}
+    </section>
+  );
+}
+
+/** Componentes (de `estado`, o de la revisión) y, si hay revisión, sus textos y fotos. */
+export function TablaRevision({ r, estado, fotos, pending }: { r?: Revision; estado?: EstadoComponentes; fotos?: LocalFoto[]; pending?: PendingState }) {
   const [abierta, setAbierta] = useState<LocalFoto | null>(null);
+  const e = estado ?? r!;
   return (
     <div className="card divide-y divide-slate-100 text-sm">
       {fotos && fotos.length > 0 && (
@@ -190,13 +259,13 @@ export function TablaRevision({ r, fotos, pending }: { r: Revision; fotos?: Loca
         <div key={c.key} className="flex items-start gap-3 px-3 py-2">
           <span className="w-32 shrink-0 text-slate-600">{c.label}</span>
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            {c.key === 'estacas' && r.estacasCantidad !== null && <span className="font-medium">{r.estacasCantidad}</span>}
-            <EstadoBadge estado={r[`${c.key}Estado`]} />
-            {r[`${c.key}Nota`] && <span className="text-slate-700">{r[`${c.key}Nota`]}</span>}
+            {c.key === 'estacas' && e.estacasCantidad !== null && <span className="font-medium">{e.estacasCantidad}</span>}
+            <EstadoBadge estado={e[`${c.key}Estado`]} />
+            {e[`${c.key}Nota`] && <span className="text-slate-700">{e[`${c.key}Nota`]}</span>}
           </span>
         </div>
       ))}
-      {CAMPOS_TEXTO.map((t) =>
+      {r && CAMPOS_TEXTO.map((t) =>
         r[t.key] ? (
           <div key={t.key} className="flex items-start gap-3 px-3 py-2">
             <span className="w-32 shrink-0 text-slate-600">{t.label}</span>
@@ -204,7 +273,7 @@ export function TablaRevision({ r, fotos, pending }: { r: Revision; fotos?: Loca
           </div>
         ) : null,
       )}
-      {r.campa && (
+      {r?.campa && (
         <div className="flex items-start gap-3 px-3 py-2">
           <span className="w-32 shrink-0 text-slate-600">Campamento</span>
           <span>{r.campa}</span>

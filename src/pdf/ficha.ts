@@ -1,6 +1,16 @@
 // Ficha de revisión para imprimir: etiquetas + 2 columnas para escribir a mano.
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
-import { CAMPOS_TEXTO, COMPONENTES, ESTADO_LABEL, TIPO_LABEL, type Carpa, type Revision } from '../../shared/model';
+import {
+  CAMPOS_TEXTO,
+  COMPONENTES,
+  ESTADO_LABEL,
+  estadoActual,
+  TIPO_LABEL,
+  type Carpa,
+  type EstadoActual,
+  type EstadoComponentes,
+  type Revision,
+} from '../../shared/model';
 import { db } from '../db/dexie';
 import { compararCodigo, ultimaRevision } from '../db/queries';
 import { fechaCorta } from '../lib/format';
@@ -12,7 +22,7 @@ export interface FichaOpts {
   dosPorHoja: boolean;
 }
 
-function valorComponente(r: Revision, key: (typeof COMPONENTES)[number]['key']): string {
+function valorComponente(r: EstadoComponentes, key: (typeof COMPONENTES)[number]['key']): string {
   const partes: string[] = [];
   if (key === 'estacas' && r.estacasCantidad !== null) partes.push(String(r.estacasCantidad));
   const e = r[`${key}Estado`];
@@ -23,7 +33,18 @@ function valorComponente(r: Revision, key: (typeof COMPONENTES)[number]['key']):
 }
 
 /** `anchoTotal`: ancho de la ficha en pt (sin márgenes de página). */
-export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origin: string, escala = 1, anchoTotal = 523): Content {
+/**
+ * `previo`: con qué se precarga la columna 1. Componentes y fecha del estado actual (puede ser una edición
+ * a mano posterior a la revisión); tribu, dirigentes y observaciones de la última revisión.
+ */
+export function fichaContent(
+  carpa: Carpa,
+  previo: { actual: EstadoActual; ultima?: Revision } | undefined,
+  origin: string,
+  escala = 1,
+  anchoTotal = 523,
+): Content {
+  const anterior = previo?.ultima;
   const fs = (n: number) => Math.round(n * escala * 10) / 10;
   // pdfmake suma el padding (4 + 4) y las líneas a estas alturas: son el espacio para el texto.
   const alto = { normal: 23 * escala, componente: 29 * escala, observaciones: 92 * escala };
@@ -36,17 +57,17 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
 
   const fila = (etiqueta: string, h: number, col1: string, col2 = '') => ({ cells: [label(etiqueta), val(col1, h), col2 ? val(col2, h) : ''], h });
   const filas: { cells: TableCell[]; h: number }[] = [
-    fila('Fecha de revisión', alto.normal, anterior ? fechaCorta(anterior.fecha) : ''),
+    fila('Fecha de revisión', alto.normal, previo ? fechaCorta(previo.actual.fecha) : ''),
     fila('Nombre', alto.normal, carpa.nombre, carpa.nombre),
     fila('Tipo (canadiense o iglú)', alto.normal, TIPO_LABEL[carpa.tipo], TIPO_LABEL[carpa.tipo]),
-    ...COMPONENTES.map((c) => fila(c.label, alto.componente, anterior ? valorComponente(anterior, c.key) : '')),
+    ...COMPONENTES.map((c) => fila(c.label, alto.componente, previo ? valorComponente(previo.actual.estado, c.key) : '')),
     ...CAMPOS_TEXTO.map((t) => fila(t.label, t.key === 'observaciones' ? alto.observaciones : alto.normal, anterior?.[t.key] ?? '')),
   ];
 
   const encabezado: TableCell[] = [
     { text: '', border: [false, false, false, false] },
-    { text: anterior ? 'Revisión anterior' : 'Revisión 1', bold: true, alignment: 'center', fontSize: fs(9), fillColor: '#f1f5f9' },
-    { text: anterior ? 'Revisión nueva' : 'Revisión 2', bold: true, alignment: 'center', fontSize: fs(9), fillColor: '#f1f5f9' },
+    { text: previo ? 'Revisión anterior' : 'Revisión 1', bold: true, alignment: 'center', fontSize: fs(9), fillColor: '#f1f5f9' },
+    { text: previo ? 'Revisión nueva' : 'Revisión 2', bold: true, alignment: 'center', fontSize: fs(9), fillColor: '#f1f5f9' },
   ];
 
   return {
@@ -96,7 +117,9 @@ export async function fichaDoc(carpaIds: string[], opts: FichaOpts, origin = loc
   const carpas = (await db.carpas.bulkGet(carpaIds)).filter((c): c is Carpa => Boolean(c && !c.deletedAt)).sort(compararCodigo);
   const fichas: Content[] = [];
   for (const c of carpas) {
-    const anterior = opts.precargar ? await ultimaRevision(c.id) : undefined;
+    const ultima = opts.precargar ? await ultimaRevision(c.id) : undefined;
+    const actual = opts.precargar ? estadoActual(c, ultima) : undefined;
+    const anterior = actual ? { actual, ultima } : undefined;
     // Ancho útil: A4 vertical 595 − 2×36 de margen; apaisada (842 − 2×24 − 28 entre fichas) / 2.
     fichas.push(opts.dosPorHoja ? fichaContent(c, anterior, origin, 0.74, 383) : fichaContent(c, anterior, origin, 1, 523));
   }

@@ -1,6 +1,6 @@
 // Esquema de Postgres. Las columnas se nombran en snake_case (casing de Drizzle).
 import { sql } from 'drizzle-orm';
-import { bigint, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { ESTADOS, ESTADOS_GENERALES, TIPOS } from '../../shared/model.js';
 
 const ms = (name?: string) => (name ? bigint(name, { mode: 'number' }) : bigint({ mode: 'number' }));
@@ -27,6 +27,8 @@ export const carpas = pgTable(
     estadoGeneral: text({ enum: ESTADOS_GENERALES }).notNull(),
     notas: text(),
     fotoPrincipalId: uuid(),
+    estadoActual: jsonb(),
+    estadoActualEn: ms(),
   },
   (t) => [
     uniqueIndex('carpas_codigo_vivo').on(t.codigo).where(sql`${t.deletedAt} is null`),

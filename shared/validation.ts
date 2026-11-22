@@ -12,6 +12,13 @@ const auditable = {
   deletedAt: ts.nullable(),
 };
 
+const componentes = Object.fromEntries(
+  COMPONENTES.flatMap((c) => [
+    [`${c.key}Estado`, z.enum(ESTADOS).nullable()],
+    [`${c.key}Nota`, texto(1000)],
+  ]),
+);
+
 export const carpaSchema = z.object({
   ...auditable,
   codigo: z.string().trim().min(1).max(20),
@@ -21,6 +28,9 @@ export const carpaSchema = z.object({
   estadoGeneral: z.enum(ESTADOS_GENERALES),
   notas: texto(4000),
   fotoPrincipalId: z.string().uuid().nullable(),
+  // Opcionales: un celular con la versión anterior no los manda, y entonces no se tocan (ver sync.ts).
+  estadoActual: z.object(componentes).extend({ estacasCantidad: z.number().int().min(0).max(500).nullable() }).nullable().optional(),
+  estadoActualEn: ts.nullable().optional(),
 });
 
 export const fotoSchema = z.object({
@@ -33,12 +43,6 @@ export const fotoSchema = z.object({
   orden: z.number().int(),
 });
 
-const componentes = Object.fromEntries(
-  COMPONENTES.flatMap((c) => [
-    [`${c.key}Estado`, z.enum(ESTADOS).nullable()],
-    [`${c.key}Nota`, texto(1000)],
-  ]),
-);
 const textos = Object.fromEntries(CAMPOS_TEXTO.map((t) => [t.key, texto(4000)]));
 
 export const revisionSchema = z.object({

@@ -30,7 +30,7 @@ describe('push/pull', () => {
     const r = await push(db, [{ entidad: 'carpas', row: c as never }]);
     expect(r).toEqual([{ entidad: 'carpas', id: c.id, ok: true }]);
     const p = await pull(db, 0);
-    expect(p.carpas).toEqual([c]);
+    expect(p.carpas).toEqual([{ ...c, estadoActual: null, estadoActualEn: null }]);
     expect(p.cursor).toBeGreaterThan(0);
   });
 
@@ -89,4 +89,21 @@ describe('push/pull', () => {
     expect(fotos.find((f) => f.id === vieja.id)?.revisionId).toBeNull();
     expect(fotos.find((f) => f.id === deRevision.id)?.revisionId).toBe(revId);
   });
+
+  it('guarda el estado actual editado a mano y un celular viejo (sin el campo) no lo borra', async () => {
+    const estado = { ...revisionVacia('x', 'y', 0, '2026-01-01'), cuerpoEstado: 'mal', cuerpoNota: 'tajo' };
+    const soloEstado = Object.fromEntries(Object.entries(estado).filter(([k]) => /Estado$|Nota$|^estacasCantidad$/.test(k)));
+    const c = carpa({ estadoActual: soloEstado as never, estadoActualEn: 5000 });
+    await push(db, [{ entidad: 'carpas', row: c as never }]);
+    expect((await pull(db, 0)).carpas[0].estadoActual?.cuerpoEstado).toBe('mal');
+    // Versión anterior de la app: manda la carpa sin estadoActual
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { estadoActual, estadoActualEn, ...vieja } = c;
+    await push(db, [{ entidad: 'carpas', row: { ...vieja, nombre: 'Renombrada', updatedAt: 9000 } as never }]);
+    const [despues] = (await pull(db, 0)).carpas;
+    expect(despues.nombre).toBe('Renombrada');
+    expect(despues.estadoActual?.cuerpoNota).toBe('tajo');
+    expect(despues.estadoActualEn).toBe(5000);
+  });
 });
+

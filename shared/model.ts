@@ -57,6 +57,13 @@ export interface Carpa extends Auditable {
   estadoGeneral: EstadoGeneral;
   notas: string | null;
   fotoPrincipalId: string | null;
+  /**
+   * Estado actual editado a mano, sin cargar una revisión (ej. se arregló un cierre). Null: el estado
+   * actual es el de la última revisión. Ver `estadoActual()`.
+   */
+  estadoActual?: EstadoComponentes | null;
+  /** Cuándo se editó a mano (ms). Una revisión creada después vuelve a mandar. */
+  estadoActualEn?: number | null;
 }
 
 export interface Foto extends Auditable {
@@ -79,6 +86,40 @@ export interface Revision extends Auditable, EstadosComponentes, Textos {
   fecha: string;
   estacasCantidad: number | null;
   campa: string | null;
+}
+
+/** Los campos de los 7 componentes: lo que es "el estado" de una carpa. */
+export type EstadoComponentes = EstadosComponentes & { estacasCantidad: number | null };
+
+export const CAMPOS_ESTADO: readonly (keyof EstadoComponentes)[] = [
+  ...COMPONENTES.flatMap((c) => [`${c.key}Estado` as const, `${c.key}Nota` as const]),
+  'estacasCantidad',
+];
+
+export function estadoDe(r: EstadoComponentes): EstadoComponentes {
+  return Object.fromEntries(CAMPOS_ESTADO.map((k) => [k, r[k] ?? null])) as EstadoComponentes;
+}
+
+export interface EstadoActual {
+  estado: EstadoComponentes;
+  /** De dónde sale: la última revisión, o una edición a mano posterior. */
+  fuente: 'revision' | 'manual';
+  /** Fecha YYYY-MM-DD de ese estado. */
+  fecha: string;
+}
+
+function fechaLocal(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Estado actual de la carpa: lo más nuevo entre la edición a mano y la última revisión. */
+export function estadoActual(carpa: Pick<Carpa, 'estadoActual' | 'estadoActualEn'>, ultima: Revision | undefined): EstadoActual | undefined {
+  const manual = carpa.estadoActual && carpa.estadoActualEn ? carpa.estadoActual : null;
+  if (manual && (!ultima || carpa.estadoActualEn! >= ultima.createdAt))
+    return { estado: estadoDe(manual), fuente: 'manual', fecha: fechaLocal(carpa.estadoActualEn!) };
+  if (ultima) return { estado: estadoDe(ultima), fuente: 'revision', fecha: ultima.fecha };
+  return undefined;
 }
 
 export type Entidad = 'carpas' | 'fotos' | 'revisiones';
@@ -106,7 +147,7 @@ export interface PullResponse {
   revisiones: Revision[];
 }
 
-export function componentesConProblema(r: Revision | undefined): Componente[] {
+export function componentesConProblema(r: EstadoComponentes | undefined): Componente[] {
   if (!r) return [];
   return COMPONENTES.filter((c) => {
     const e = r[`${c.key}Estado`];
@@ -114,13 +155,13 @@ export function componentesConProblema(r: Revision | undefined): Componente[] {
   }).map((c) => c.key);
 }
 
-export function componentesConFaltante(r: Revision | undefined): Componente[] {
+export function componentesConFaltante(r: EstadoComponentes | undefined): Componente[] {
   if (!r) return [];
   return COMPONENTES.filter((c) => r[`${c.key}Estado`] === 'falta').map((c) => c.key);
 }
 
 /** Todo lo que no está "bien": problemas y faltantes. Para resaltar en los PDFs. */
-export function componentesConObservaciones(r: Revision | undefined): Componente[] {
+export function componentesConObservaciones(r: EstadoComponentes | undefined): Componente[] {
   if (!r) return [];
   return COMPONENTES.filter((c) => {
     const e = r[`${c.key}Estado`];
