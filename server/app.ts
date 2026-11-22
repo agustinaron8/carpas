@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { del } from '@vercel/blob';
-import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { del, issueSignedToken } from '@vercel/blob';
+import { handleUploadPresigned, type HandleUploadPresignedBody } from '@vercel/blob/client';
 import { pushBodySchema } from '../shared/validation.js';
 import { passwordOk, signToken, tokenOk } from './auth.js';
 import { getDb } from './db/client.js';
@@ -36,7 +36,7 @@ app.post('/sync/push', async (c) => {
   const parsed = pushBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: 'Pedido inválido' }, 400);
   const results = await push(getDb(), parsed.data.items, async (foto) => {
-    if (process.env.BLOB_READ_WRITE_TOKEN) await del([foto.url, foto.thumbUrl]);
+    if (blobConfigurado()) await del([foto.url, foto.thumbUrl]);
   });
   return c.json({ results });
 });
@@ -46,19 +46,38 @@ app.get('/sync/pull', async (c) => {
   return c.json(await pull(getDb(), Number.isFinite(since) ? since : 0));
 });
 
+/** En Vercel el store se conecta por OIDC (BLOB_STORE_ID); con un token de lectura y escritura también anda. */
+function blobConfigurado(): boolean {
+  return Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+const TIPOS_FOTO = ['image/jpeg', 'image/webp', 'image/png'];
+const MAX_FOTO = 5 * 1024 * 1024;
+
+// Subida directa del celular a Blob con una URL firmada que vale para una sola ruta.
 app.post('/blob/upload', async (c) => {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return c.json({ error: 'Almacenamiento de fotos no configurado' }, 503);
-  const body = (await c.req.json()) as HandleUploadBody;
-  const result = await handleUpload({
+  if (!blobConfigurado()) return c.json({ error: 'Almacenamiento de fotos no configurado' }, 503);
+  const body = (await c.req.json()) as HandleUploadPresignedBody;
+  const result = await handleUploadPresigned({
     body,
     request: c.req.raw,
-    onBeforeGenerateToken: async (pathname) => {
-      if (!pathname.startsWith('fotos/')) throw new Error('Ruta inválida');
+    getSignedToken: async (pathname) => {
+      if (!/^fotos\/[\w-]+\/[\w.-]+$/.test(pathname)) throw new Error('Ruta inválida');
+      const token = await issueSignedToken({
+        pathname,
+        operations: ['put'],
+        allowedContentTypes: TIPOS_FOTO,
+        maximumSizeInBytes: MAX_FOTO,
+        validUntil: Date.now() + 10 * 60_000,
+      });
       return {
-        allowedContentTypes: ['image/jpeg', 'image/webp', 'image/png'],
-        maximumSizeInBytes: 5 * 1024 * 1024,
-        addRandomSuffix: true,
-        cacheControlMaxAge: 60 * 60 * 24 * 365,
+        token,
+        urlOptions: {
+          allowedContentTypes: TIPOS_FOTO,
+          maximumSizeInBytes: MAX_FOTO,
+          addRandomSuffix: true,
+          cacheControlMaxAge: 60 * 60 * 24 * 365,
+        },
       };
     },
   });

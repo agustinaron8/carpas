@@ -125,14 +125,15 @@ async function subirFoto(token: string, carpa: Carpa, bytes: Uint8Array, now: nu
 }
 
 async function subir(token: string, pathname: string, data: Buffer): Promise<string> {
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  // En producción: `vercel env pull` deja BLOB_STORE_ID y VERCEL_OIDC_TOKEN (o un BLOB_READ_WRITE_TOKEN).
+  if (process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN) {
     const { put } = await import('@vercel/blob');
     const r = await put(pathname, data, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: true, cacheControlMaxAge: 31536000 });
     return r.url;
   }
   // API local (scripts/dev-api.ts) sin cuenta de Vercel.
   const res = await fetch(`${API}/api/dev-blob/${pathname}`, { method: 'PUT', body: new Uint8Array(data), headers: { authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Subida de foto: ${res.status}. Para producción hace falta BLOB_READ_WRITE_TOKEN.`);
+  if (!res.ok) throw new Error(`Subida de foto: ${res.status}. Para producción hacen falta las variables de "vercel env pull".`);
   return new URL(((await res.json()) as { url: string }).url, API).href;
 }
 

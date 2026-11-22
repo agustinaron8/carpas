@@ -49,9 +49,9 @@ async function uploader(): Promise<Upload> {
       return new URL((await res.json()).url, location.origin).href;
     };
   }
-  const { upload } = await import('@vercel/blob/client');
+  const { uploadPresigned } = await import('@vercel/blob/client');
   return async (pathname, blob) =>
-    (await upload(pathname, blob, { access: 'public', handleUploadUrl: '/api/blob/upload', contentType: 'image/jpeg', headers })).url;
+    (await uploadPresigned(pathname, blob, { access: 'public', handleUploadUrl: '/api/blob/upload', contentType: 'image/jpeg', headers })).url;
 }
 
 function motivo(msg: string): string {
