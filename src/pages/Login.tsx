@@ -1,7 +1,7 @@
 import { Tent } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { login } from '../lib/api';
+import { login, puedeEntrarSinSenal } from '../lib/api';
 import { startSync, syncNow } from '../sync/syncService';
 
 export function Login() {
@@ -22,7 +22,7 @@ export function Login() {
       const next = params.get('next');
       nav(next && next.startsWith('/') ? next : '/', { replace: true });
     } catch (err) {
-      setError(navigator.onLine ? (err instanceof Error ? err.message : 'No se pudo entrar') : 'Para entrar la primera vez hace falta señal.');
+      setError(err instanceof Error ? err.message : 'No se pudo entrar');
     } finally {
       setBusy(false);
     }
@@ -53,7 +53,11 @@ export function Login() {
         <button className="btn-primary w-full" disabled={busy || !password}>
           {busy ? 'Entrando…' : 'Entrar'}
         </button>
-        <p className="text-center text-xs text-slate-500">Una vez adentro, la app funciona sin señal.</p>
+        <p className="text-center text-xs text-slate-500">
+          {puedeEntrarSinSenal()
+            ? 'Este celular ya entró antes: se puede entrar aunque no haya señal.'
+            : 'La primera vez hace falta señal. Después, la app funciona sin señal.'}
+        </p>
       </form>
     </div>
   );

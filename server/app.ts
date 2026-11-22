@@ -32,6 +32,9 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// Sesión deslizante: el celular pide un token nuevo al sincronizar, así no vence mientras se use.
+app.post('/session/renew', async (c) => c.json({ token: await signToken() }));
+
 app.post('/sync/push', async (c) => {
   const parsed = pushBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: 'Pedido inválido' }, 400);

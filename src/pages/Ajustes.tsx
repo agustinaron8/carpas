@@ -5,7 +5,7 @@ import { db, getMeta } from '../db/dexie';
 import { usePending } from '../hooks/usePending';
 import { useTema } from '../hooks/useTema';
 import type { Tema } from '../lib/theme';
-import { setToken } from '../lib/api';
+import { logout } from '../lib/api';
 import { haceCuanto, plural } from '../lib/format';
 import { resetCursor, syncNow, useSyncState } from '../sync/syncService';
 
@@ -82,9 +82,9 @@ export default function Ajustes() {
           onClick={() => {
             const msg = pending.total
               ? `Tenés ${sinSubir} sin subir. Quedan en este celular, pero no se suben hasta que vuelvas a entrar. ¿Cerrar sesión?`
-              : '¿Cerrar sesión?';
+              : '¿Cerrar sesión? Para volver a entrar alcanza con la contraseña, aunque no haya señal.';
             if (!confirm(msg)) return;
-            setToken(null);
+            logout();
             nav('/login', { replace: true });
           }}
         >

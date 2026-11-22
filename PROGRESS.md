@@ -3,7 +3,7 @@
 **Estado: publicado en https://carpas-grupo.vercel.app con los datos del Docs cargados. Falta probarlo en celulares reales.**
 
 ## Pendiente de Agustín
-1. **Probar en celulares reales** (iPhone y Android): instalar en la pantalla de inicio, cargar en modo avión, volver a tener señal.
+1. **Probar en celulares reales** (iPhone y Android): instalar en la pantalla de inicio, cargar en modo avión, volver a tener señal. Probar también cerrar sesión y volver a entrar en modo avión.
 2. Que alguien del grupo revise `scripts/data/import-report.md` (cómo se interpretó cada campo del Docs).
 
 Decidido: las 16 revisiones del Docs sin fecha quedan con 01/01/2026.
@@ -24,6 +24,8 @@ Probado en Chromium (390 px): login, alta con foto, revisión, ficha e inventari
 - Importación del Docs (`scripts/import-docx.ts`): 33 carpas, 30 revisiones y 20 fotos, sin errores. Reporte en `scripts/data/import-report.md` (no se sube). Correrlo de nuevo no duplica.
 
 En producción (22/11): login, 33 carpas con fotos, revisión con foto subida desde el navegador, borrado de la foto en Blob al borrar la revisión, y apertura sin red con el service worker.
+
+- Entrar sin señal en un celular que ya entró antes (también después de cerrar sesión), y renovación automática de la sesión: probados en Chromium.
 
 ## Falta
 - Hito 9: probar en un celular real en modo avión, Lighthouse.

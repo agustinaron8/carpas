@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 import type { Entidad, EntityMap, PullResponse, PushItem, PushResult } from '../../shared/model';
 import { db, getMeta, setMeta, type LocalFoto } from '../db/dexie';
 import { onLocalWrite } from '../db/repo';
-import { api, AuthError, getToken, NetworkError } from '../lib/api';
+import { api, AuthError, edadToken, getToken, NetworkError, renovarToken } from '../lib/api';
 import { prefetchThumbs, uploadPendingFotos } from './fotos';
 
 export interface SyncState {
@@ -77,6 +77,8 @@ async function syncOnce() {
     await uploadPendingFotos();
     const subidos = await pushOutbox();
     await pullChanges();
+    // Sesión deslizante: renueva el token una vez por día de uso.
+    if (edadToken() > 24 * 3600_000) await renovarToken().catch(() => undefined);
     const now = Date.now();
     await setMeta('lastSync', now);
     set({ lastSync: now, error: null, authError: false, online: true });
