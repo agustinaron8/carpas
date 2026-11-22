@@ -1,0 +1,21 @@
+# Decisiones
+
+- Repo `carpas` en GitHub, público como `find-without-signal`. Los datos reales (el .docx con nombres) van en `scripts/data/`, que está en `.gitignore`.
+- Versiones fijadas para el Node 18 local: Vite 6, Tailwind 3, React 18, jose 5, concurrently 8. Vercel usa Node 20+.
+- Fechas de auditoría como milisegundos (`bigint`) en Postgres y en el cliente, sin conversiones. La fecha de revisión es texto `YYYY-MM-DD`.
+- El cursor del pull es la hora del servidor (`server_updated_at`), no el `updatedAt` del celular: así un celular que sube cambios viejos después de días sin señal no queda fuera del pull de los demás. El `updatedAt` del celular solo decide el last-write-wins.
+- El pull mira 60 s hacia atrás del cursor por si una escritura terminó después del pull anterior. Repetir una fila no cambia nada. No hay paginación: son decenas de carpas y cientos de revisiones.
+- Sin claves foráneas en Postgres: con sincronización offline una revisión puede llegar antes que su carpa, o la carpa fallar por código repetido. Los push se ordenan carpas → fotos → revisiones.
+- Código de carpa único solo entre carpas no borradas (índice parcial). Si dos celulares crean el mismo código sin señal, el segundo recibe el error "Ya hay otra carpa con el código…" y lo ve en Pendientes.
+- Lo pendiente en el celular gana en el pull: no se pisa con lo del servidor hasta que se sube, y ahí decide el servidor.
+- Una sola función en `api/index.ts` con rewrite de `/api/*` (plantilla oficial de Hono para Vercel). Los imports del servidor llevan `.js` porque Vercel corre ESM sin bundlear.
+- La foto se guarda en el celular y entra al outbox recién cuando terminó de subir a Blob, porque la base exige `url`. Se guardan la foto (1600 px) y la miniatura (400 px); las miniaturas de fotos cargadas en otros celulares se bajan después de cada sync para verlas sin señal.
+- En desarrollo, sin cuenta de Vercel, la API local emula Blob en disco (`/api/dev-blob`). Con `VITE_REAL_BLOB=1` se usa el Blob real.
+- Zod solo en el servidor: el cliente usa los tipos de `shared/model.ts` y no carga Zod.
+- pdfmake (con fuentes, ~2,7 MB) se carga solo al generar un PDF, pero está en el precache del service worker para que funcione sin señal.
+- Ficha: 1 por A4 vertical por defecto; opción de 2 por A4 apaisada. La columna 1 sale con la última revisión si se elige "Precargar".
+- Revisión: se registra la campa como campo opcional ("Campamento"). No hay fotos por revisión por ahora.
+- El formulario de revisión permite cambiar el estado general de la carpa al final, porque es el momento en que se decide.
+- Por defecto el listado oculta las carpas dadas de baja ("Ver bajas" las muestra).
+- Cerrar sesión no borra los datos del celular; los pendientes se suben al volver a entrar. "Borrar datos locales" sí los pierde, y avisa.
+- Si un pedido falla por red, el indicador pasa a "Sin conexión" aunque el navegador diga que hay red (señal débil o wifi sin internet).

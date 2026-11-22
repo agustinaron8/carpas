@@ -1,0 +1,144 @@
+// Inventario: una carpa por bloque, con estado actual y revisiones anteriores.
+import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
+import {
+  CAMPOS_TEXTO,
+  COMPONENTES,
+  componentesConProblema,
+  ESTADO_GENERAL_LABEL,
+  ESTADO_LABEL,
+  TIPO_LABEL,
+  type Carpa,
+  type Revision,
+} from '../../shared/model';
+import { db } from '../db/dexie';
+import { compararCodigo, revisionesDe } from '../db/queries';
+import { fechaCorta } from '../lib/format';
+import { blobToDataUrl, COLOR_ESTADO, descargar, hoyArchivo } from './common';
+
+export interface InventarioOpts {
+  /** Cuántas revisiones anteriores a la actual incluir (0 = ninguna, Infinity = todas). */
+  revisiones: number;
+  fotos: boolean;
+}
+
+async function fotoDataUrl(carpa: Carpa): Promise<string | null> {
+  if (!carpa.fotoPrincipalId) return null;
+  const foto = await db.fotos.get(carpa.fotoPrincipalId);
+  if (!foto || foto.deletedAt) return null;
+  try {
+    let blob = foto.thumbBlob ?? foto.blob;
+    if (!blob && foto.thumbUrl) {
+      const res = await fetch(foto.thumbUrl, { mode: 'cors' });
+      if (res.ok) blob = await res.blob();
+    }
+    if (!blob) return null;
+    // pdfmake solo entiende JPEG y PNG.
+    if (!/^image\/(jpeg|png)$/.test(blob.type)) return null;
+    return await blobToDataUrl(blob);
+  } catch {
+    return null;
+  }
+}
+
+function tablaEstado(r: Revision): Content {
+  const body: TableCell[][] = [
+    [
+      { text: 'Componente', bold: true, fillColor: '#f1f5f9' },
+      { text: 'Estado', bold: true, fillColor: '#f1f5f9' },
+      { text: 'Nota', bold: true, fillColor: '#f1f5f9' },
+    ],
+  ];
+  for (const c of COMPONENTES) {
+    const e = r[`${c.key}Estado`];
+    const cant = c.key === 'estacas' && r.estacasCantidad !== null ? `${r.estacasCantidad}${e ? ' · ' : ''}` : '';
+    body.push([
+      c.label,
+      { text: cant + (e ? ESTADO_LABEL[e] : cant ? '' : '—'), fillColor: e && e !== 'bien' ? COLOR_ESTADO[e] : undefined, bold: Boolean(e && e !== 'bien') },
+      r[`${c.key}Nota`] ?? '',
+    ]);
+  }
+  for (const t of CAMPOS_TEXTO) {
+    if (r[t.key]) body.push([t.label, { text: r[t.key]!, colSpan: 2 }, '']);
+  }
+  if (r.campa) body.push(['Campamento', { text: r.campa, colSpan: 2 }, '']);
+  return { table: { widths: [130, 80, '*'], body }, layout: 'lightHorizontalLines', fontSize: 9 };
+}
+
+function tablaHistorial(revs: Revision[]): Content {
+  const body: TableCell[][] = [
+    ['Fecha', 'Tribu / campa', 'Con problemas', 'Observaciones'].map((t) => ({ text: t, bold: true, fillColor: '#f1f5f9' })),
+  ];
+  for (const r of revs) {
+    const problemas = componentesConProblema(r)
+      .map((k) => {
+        const c = COMPONENTES.find((x) => x.key === k)!;
+        return `${c.label.split(' ')[0]}: ${ESTADO_LABEL[r[`${k}Estado`]!].toLowerCase()}`;
+      })
+      .join(', ');
+    body.push([fechaCorta(r.fecha), [r.tribu, r.campa].filter(Boolean).join(' · '), problemas || '—', r.observaciones ?? '']);
+  }
+  return { table: { widths: [52, 90, 130, '*'], body, headerRows: 1 }, layout: 'lightHorizontalLines', fontSize: 8.5 };
+}
+
+export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): Promise<TDocumentDefinitions> {
+  const carpas = (await db.carpas.bulkGet(carpaIds)).filter((c): c is Carpa => Boolean(c && !c.deletedAt)).sort(compararCodigo);
+  const content: Content[] = [
+    { text: 'Inventario de carpas', fontSize: 18, bold: true },
+    { text: `${carpas.length} carpas · ${fechaCorta(hoyArchivo())}`, color: '#64748b', margin: [0, 2, 0, 12] },
+  ];
+  for (const [i, c] of carpas.entries()) {
+    const revs = await revisionesDe(c.id);
+    const ultima = revs[0];
+    const anteriores = opts.revisiones > 0 ? revs.slice(1, 1 + opts.revisiones) : [];
+    const img = opts.fotos ? await fotoDataUrl(c) : null;
+    const datos: Content = {
+      stack: [
+        { text: [{ text: `${c.codigo}  `, bold: true }, { text: c.nombre, bold: true }], fontSize: 14 },
+        {
+          text: [
+            `${TIPO_LABEL[c.tipo]}`,
+            c.capacidad ? ` · ${c.capacidad} personas` : '',
+            ` · Estado general: `,
+            { text: ESTADO_GENERAL_LABEL[c.estadoGeneral], bold: true, color: c.estadoGeneral === 'lista' ? '#166534' : c.estadoGeneral === 'baja' ? '#64748b' : '#b91c1c' },
+          ],
+          margin: [0, 3, 0, 0],
+        },
+        c.notas ? { text: c.notas, italics: true, color: '#92400e', margin: [0, 4, 0, 0] } : { text: '' },
+        { text: ultima ? `Última revisión: ${fechaCorta(ultima.fecha)}` : 'Sin revisiones', color: '#64748b', margin: [0, 4, 0, 0] },
+      ],
+    };
+    const bloque: Content[] = [
+      {
+        columns: img ? [{ image: img, fit: [90, 90], width: 90 }, { ...datos, width: '*' }] : [datos],
+        columnGap: 12,
+        margin: [0, 0, 0, 6],
+      },
+    ];
+    if (ultima) bloque.push({ text: 'Estado actual', bold: true, margin: [0, 4, 0, 2] }, tablaEstado(ultima));
+    if (anteriores.length) bloque.push({ text: 'Revisiones anteriores', bold: true, margin: [0, 8, 0, 2] }, tablaHistorial(anteriores));
+    content.push({
+      stack: bloque,
+      margin: [0, i === 0 ? 0 : 18, 0, 0],
+      // Que una carpa no quede partida entre dos hojas, salvo que su historial sea largo.
+      unbreakable: anteriores.length <= 6,
+    });
+  }
+  return {
+    pageSize: 'A4',
+    pageMargins: [36, 36, 36, 40],
+    defaultStyle: { fontSize: 10 },
+    info: { title: 'Inventario de carpas' },
+    footer: (page, pages) => ({ text: `${page} / ${pages}`, alignment: 'center', fontSize: 8, color: '#94a3b8' }),
+    content,
+  };
+}
+
+export async function generarInventario(carpaIds: string[], opts: InventarioOpts): Promise<void> {
+  const doc = await inventarioDoc(carpaIds, opts);
+  let nombre = `inventario-carpas-${hoyArchivo()}.pdf`;
+  if (carpaIds.length === 1) {
+    const c = await db.carpas.get(carpaIds[0]);
+    if (c) nombre = `carpa-${c.codigo}-${hoyArchivo()}.pdf`;
+  }
+  await descargar(doc, nombre);
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dev-dist/
+.vercel/
+.env*
+!.env.example
+*.log
+.DS_Store
+coverage/
+.pglite/
+# Datos reales del grupo (tienen nombres de personas)
+scripts/data/
