@@ -1,9 +1,10 @@
 # Progreso
 
-**Estado: hitos 1 a 8 hechos y probados en local (la importación del Docs, contra la API local). Falta el deploy en la cuenta nueva de Vercel y correr ahí la importación.**
+**Estado: publicado en https://carpas-ten.vercel.app con los datos del Docs cargados. Falta probarlo en celulares reales.**
 
-## Bloqueado (necesita a Agustín)
-1. **Deploy en la cuenta de Vercel de find-without-signal** (equipo `agustinaron8-5782`): hace falta acceso a la CLI de Vercel (o hacerlo desde el panel) para crear el proyecto, Neon y Blob, cargar `APP_PASSWORD` (ya acordada, no va en el repo) y `AUTH_SECRET`, migrar e importar. Revisar antes el consumo de la cuenta.
+## Pendiente de Agustín
+1. **Probar en celulares reales** (iPhone y Android): instalar en la pantalla de inicio, cargar en modo avión, volver a tener señal.
+2. Que alguien del grupo revise `scripts/data/import-report.md` (cómo se interpretó cada campo del Docs).
 
 Decidido: las 16 revisiones del Docs sin fecha quedan con 01/01/2026.
 
@@ -22,7 +23,8 @@ Probado en Chromium (390 px): login, alta con foto, revisión, ficha e inventari
 
 - Importación del Docs (`scripts/import-docx.ts`): 33 carpas, 30 revisiones y 20 fotos, sin errores. Reporte en `scripts/data/import-report.md` (no se sube). Correrlo de nuevo no duplica.
 
+En producción (22/11): login, 33 carpas con fotos, revisión con foto subida desde el navegador, borrado de la foto en Blob al borrar la revisión, y apertura sin red con el service worker.
+
 ## Falta
-- Correr la importación contra producción (`--api https://… --password …` con `BLOB_READ_WRITE_TOKEN`).
 - Hito 9: probar en un celular real en modo avión, Lighthouse.
 - A decidir al probar la app: deslizar para actualizar, y Background Sync en Android.

@@ -28,3 +28,5 @@
 - Rótulos de la ficha como en la de papel: "Tipo (canadiense o iglú)", "Dirigente de la comisión (revisión)".
 - "Con problemas" = algún componente Regular o Mal, o estado general Revisar/Reparar. "Falta" (ej. no tiene bolsa de estacas) se filtra aparte con "Con faltantes". Los PDFs siguen resaltando todo lo que no está Bien.
 - Deploy en la misma cuenta de Vercel que find-without-signal. La contraseña del grupo vive solo en `APP_PASSWORD` de Vercel.
+- Las fotos suben con URLs firmadas (`uploadPresigned` + `issueSignedToken`) usando OIDC, sin token de Blob fijo: es como Vercel conectó el store, y evita guardar un secreto permanente.
+- Todo en São Paulo (`gru1`): funciones, Neon y Blob, por cercanía con el grupo.

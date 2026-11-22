@@ -20,13 +20,17 @@ En desarrollo la contraseña es `carpas` (se cambia en `.env.local`, ver `.env.e
 
 ## Despliegue (Vercel)
 
-1. Importar el repo en Vercel (framework: Vite).
-2. Agregar **Neon** desde el Marketplace (crea `DATABASE_URL`) y un store de **Blob** (crea `BLOB_READ_WRITE_TOKEN`).
-3. Cargar `APP_PASSWORD` (la contraseña del grupo) y `AUTH_SECRET` (`openssl rand -base64 32`).
-4. Crear las tablas: `DATABASE_URL=... npm run db:migrate`.
-5. Carga inicial desde el Docs (poner el .docx en `scripts/data/Carpas-2026.docx`):
-   `BLOB_READ_WRITE_TOKEN=... npx tsx scripts/import-docx.ts --api https://<app>.vercel.app --password <clave>`.
-   Con `--dry-run` solo escribe el reporte en `scripts/data/import-report.md`.
+Publicado en https://carpas-ten.vercel.app (proyecto `carpas` del equipo `agustinaron8-5782`). Funciones, base (Neon) y fotos (Blob) en São Paulo (`gru1`).
+
+Cómo se armó, por si hay que repetirlo:
+1. `vercel link`, y conectar el repo.
+2. `vercel storage create carpas-fotos --type blob --access public --region gru1` y `vercel storage connect` (credenciales OIDC: `BLOB_STORE_ID`; también anda con `BLOB_READ_WRITE_TOKEN`).
+3. `vercel integration add neon --meta region=gru1` (crea `DATABASE_URL`).
+4. `APP_PASSWORD` (la contraseña del grupo) y `AUTH_SECRET` (`openssl rand -base64 48`) como variables sensibles.
+5. `vercel env pull .env.production.local --environment production` y crear las tablas: `node --env-file=.env.production.local --import tsx scripts/migrate.ts` (Node 20+).
+6. Carga inicial desde el Docs (el .docx en `scripts/data/Carpas-2026.docx`):
+   `node --env-file=.env.production.local --import tsx scripts/import-docx.ts --api https://carpas-ten.vercel.app --password <clave>`.
+   Con `--dry-run` solo escribe el reporte en `scripts/data/import-report.md`. Después, borrar `.env.production.local`.
 
 Cada push a `main` despliega. `vercel.json` manda `/api/*` a la única función (`api/index.ts`, Hono) y el resto a `index.html`.
 
