@@ -4,6 +4,7 @@ import { CAMPOS_TEXTO, COMPONENTES, ESTADO_LABEL, TIPO_LABEL, type Carpa, type R
 import { db } from '../db/dexie';
 import { compararCodigo, ultimaRevision } from '../db/queries';
 import { fechaCorta } from '../lib/format';
+import { ajustarTexto } from './ajustar';
 import { descargar, hoyArchivo } from './common';
 
 export interface FichaOpts {
@@ -21,25 +22,25 @@ function valorComponente(r: Revision, key: (typeof COMPONENTES)[number]['key']):
   return partes.join(' · ');
 }
 
-export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origin: string, escala = 1): Content {
+/** `anchoTotal`: ancho de la ficha en pt (sin márgenes de página). */
+export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origin: string, escala = 1, anchoTotal = 523): Content {
   const fs = (n: number) => Math.round(n * escala * 10) / 10;
-  // pdfmake suma el padding (4 + 4) y las líneas a estas alturas.
+  // pdfmake suma el padding (4 + 4) y las líneas a estas alturas: son el espacio para el texto.
   const alto = { normal: 23 * escala, componente: 29 * escala, observaciones: 92 * escala };
-  const val = (text: string): TableCell => ({ text, fontSize: fs(9), color: '#334155' });
+  const anchoEtiqueta = 108 * escala;
+  // Dos columnas de valores iguales, menos el padding horizontal (4 + 4) y las líneas.
+  const anchoValor = (anchoTotal - anchoEtiqueta) / 2 - 10;
+  const tamanos = [9, 8, 7].map(fs);
+  const val = (text: string, h: number): TableCell => ({ ...ajustarTexto(text, anchoValor, h, tamanos), color: '#334155' });
   const label = (text: string): TableCell => ({ text, bold: true, fontSize: fs(9.5) });
 
+  const fila = (etiqueta: string, h: number, col1: string, col2 = '') => ({ cells: [label(etiqueta), val(col1, h), col2 ? val(col2, h) : ''], h });
   const filas: { cells: TableCell[]; h: number }[] = [
-    { cells: [label('Fecha de revisión'), val(anterior ? fechaCorta(anterior.fecha) : ''), ''], h: alto.normal },
-    { cells: [label('Nombre'), val(carpa.nombre), val(carpa.nombre)], h: alto.normal },
-    { cells: [label('Tipo (canadiense o iglú)'), val(TIPO_LABEL[carpa.tipo]), val(TIPO_LABEL[carpa.tipo])], h: alto.normal },
-    ...COMPONENTES.map((c) => ({
-      cells: [label(c.label), val(anterior ? valorComponente(anterior, c.key) : ''), ''],
-      h: alto.componente,
-    })),
-    ...CAMPOS_TEXTO.map((t) => ({
-      cells: [label(t.label), val(anterior?.[t.key] ?? ''), ''],
-      h: t.key === 'observaciones' ? alto.observaciones : alto.normal,
-    })),
+    fila('Fecha de revisión', alto.normal, anterior ? fechaCorta(anterior.fecha) : ''),
+    fila('Nombre', alto.normal, carpa.nombre, carpa.nombre),
+    fila('Tipo (canadiense o iglú)', alto.normal, TIPO_LABEL[carpa.tipo], TIPO_LABEL[carpa.tipo]),
+    ...COMPONENTES.map((c) => fila(c.label, alto.componente, anterior ? valorComponente(anterior, c.key) : '')),
+    ...CAMPOS_TEXTO.map((t) => fila(t.label, t.key === 'observaciones' ? alto.observaciones : alto.normal, anterior?.[t.key] ?? '')),
   ];
 
   const encabezado: TableCell[] = [
@@ -57,7 +58,8 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
             stack: [
               { text: 'FICHA DE REVISIÓN DE CARPA', fontSize: fs(9), color: '#64748b', bold: true },
               { text: carpa.codigo, fontSize: fs(30), bold: true, margin: [0, 2, 0, 0] },
-              { text: carpa.nombre, fontSize: fs(13) },
+              // El nombre en el encabezado ocupa como mucho dos líneas.
+              ajustarTexto(carpa.nombre, anchoTotal - 100 * escala, 2 * fs(13) * 1.2, [13, 11, 9].map(fs)),
             ],
           },
           {
@@ -72,7 +74,7 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
       },
       {
         table: {
-          widths: [108 * escala, '*', '*'],
+          widths: [anchoEtiqueta, '*', '*'],
           heights: (i: number) => (i === 0 ? 0 : filas[i - 1].h),
           body: [encabezado, ...filas.map((f) => f.cells)],
           dontBreakRows: true,
@@ -80,8 +82,9 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
         layout: {
           hLineColor: () => '#94a3b8',
           vLineColor: () => '#94a3b8',
-          paddingTop: () => 4,
-          paddingBottom: () => 4,
+          // En "2 por hoja" el espacio interno también se achica, si no la ficha no entra en media hoja.
+          paddingTop: () => (escala < 1 ? 2 : 4),
+          paddingBottom: () => (escala < 1 ? 2 : 4),
         },
       },
     ],
@@ -93,7 +96,8 @@ export async function fichaDoc(carpaIds: string[], opts: FichaOpts, origin = loc
   const fichas: Content[] = [];
   for (const c of carpas) {
     const anterior = opts.precargar ? await ultimaRevision(c.id) : undefined;
-    fichas.push(fichaContent(c, anterior, origin, opts.dosPorHoja ? 0.74 : 1));
+    // Ancho útil: A4 vertical 595 − 2×36 de margen; apaisada (842 − 2×24 − 28 entre fichas) / 2.
+    fichas.push(opts.dosPorHoja ? fichaContent(c, anterior, origin, 0.74, 383) : fichaContent(c, anterior, origin, 1, 523));
   }
   const content: Content[] = [];
   if (opts.dosPorHoja) {

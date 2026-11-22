@@ -12,5 +12,5 @@
     "tsBuildInfoFile": "./node_modules/.tmp/node.tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "drizzle.config.ts", "api", "server", "shared", "scripts/**/*.ts", "tests"]
+  "include": ["vite.config.ts", "drizzle.config.ts", "api", "server", "shared", "scripts/**/*.ts", "tests", "src/pdf/ajustar.ts"]
 }
