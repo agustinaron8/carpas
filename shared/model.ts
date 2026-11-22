@@ -36,7 +36,7 @@ export const CAMPOS_TEXTO = [
   { key: 'cantidadPersonas', label: 'Cantidad de personas' },
   { key: 'tribu', label: 'Tribu que la usó' },
   { key: 'dirigenteTribu', label: 'Dirigente de la tribu a cargo' },
-  { key: 'dirigenteComision', label: 'Dirigente de la comisión' },
+  { key: 'dirigenteComision', label: 'Dirigente de la comisión (revisión)' },
   { key: 'observaciones', label: 'Observaciones de la comisión' },
 ] as const;
 export type CampoTexto = (typeof CAMPOS_TEXTO)[number]['key'];

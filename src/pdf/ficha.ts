@@ -31,7 +31,7 @@ export function fichaContent(carpa: Carpa, anterior: Revision | undefined, origi
   const filas: { cells: TableCell[]; h: number }[] = [
     { cells: [label('Fecha de revisión'), val(anterior ? fechaCorta(anterior.fecha) : ''), ''], h: alto.normal },
     { cells: [label('Nombre'), val(carpa.nombre), val(carpa.nombre)], h: alto.normal },
-    { cells: [label('Tipo'), val(TIPO_LABEL[carpa.tipo]), val(TIPO_LABEL[carpa.tipo])], h: alto.normal },
+    { cells: [label('Tipo (canadiense o iglú)'), val(TIPO_LABEL[carpa.tipo]), val(TIPO_LABEL[carpa.tipo])], h: alto.normal },
     ...COMPONENTES.map((c) => ({
       cells: [label(c.label), val(anterior ? valorComponente(anterior, c.key) : ''), ''],
       h: alto.componente,

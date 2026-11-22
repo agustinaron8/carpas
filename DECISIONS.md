@@ -19,3 +19,10 @@
 - Por defecto el listado oculta las carpas dadas de baja ("Ver bajas" las muestra).
 - Cerrar sesión no borra los datos del celular; los pendientes se suben al volver a entrar. "Borrar datos locales" sí los pierde, y avisa.
 - Si un pedido falla por red, el indicador pasa a "Sin conexión" aunque el navegador diga que hay red (señal débil o wifi sin internet).
+- Importación del Docs: una revisión por carpa que junta la tabla y el párrafo "ÚLTIMA REVISIÓN" (fecha y observaciones). Ese párrafo va con la tabla anterior; en Nahuel 22 y Mangrullo está dentro de la celda del dirigente. Fecha sin año → 2026.
+- El estado de cada componente se deduce del texto (mal: roto, quebrado, no cierra, tajo; falta: falta, no tiene, necesita, "19 de 21"; regular: revisar, cocer, cambiar, se traban, algunas dobladas…; bien: bien, perfecto, arreglado). El texto original queda siempre en la nota, salvo que diga solo "bien".
+- Estado general: "revisar" si "chequeada" lo pide o está vacía; "reparar" si algún componente está mal; si no, "lista". "LISTAAA" en el nombre se lee como lista.
+- "Dirigente a cargo" se separa en dirigente de la tribu y de la comisión ("fati v. reviso vicky", "luna (observación: cande lopez)").
+- Códigos C-01 a C-33 en el orden del Docs. Los ids salen del nombre, así que reimportar no duplica; las carpas que ya están en el servidor se saltean salvo con `--force`.
+- Las fotos se toman del .docx; dos están rotas en el original (Nahuel 7/8 y G.A) y 11 carpas no tienen foto.
+- Rótulos de la ficha como en la de papel: "Tipo (canadiense o iglú)", "Dirigente de la comisión (revisión)".

@@ -24,6 +24,9 @@ En desarrollo la contraseña es `carpas` (se cambia en `.env.local`, ver `.env.e
 2. Agregar **Neon** desde el Marketplace (crea `DATABASE_URL`) y un store de **Blob** (crea `BLOB_READ_WRITE_TOKEN`).
 3. Cargar `APP_PASSWORD` (la contraseña del grupo) y `AUTH_SECRET` (`openssl rand -base64 32`).
 4. Crear las tablas: `DATABASE_URL=... npm run db:migrate`.
+5. Carga inicial desde el Docs (poner el .docx en `scripts/data/Carpas-2026.docx`):
+   `BLOB_READ_WRITE_TOKEN=... npx tsx scripts/import-docx.ts --api https://<app>.vercel.app --password <clave>`.
+   Con `--dry-run` solo escribe el reporte en `scripts/data/import-report.md`.
 
 Cada push a `main` despliega. `vercel.json` manda `/api/*` a la única función (`api/index.ts`, Hono) y el resto a `index.html`.
 
