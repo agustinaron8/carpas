@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { setMeta, getMeta } from './db/dexie';
 import { getToken } from './lib/api';
+import { aplicarTema, seguirSistema } from './lib/theme';
 import { startSync } from './sync/syncService';
 import './index.css';
 
@@ -13,6 +14,9 @@ void (async () => {
   const ok = already || (await navigator.storage.persist());
   if ((await getMeta('persisted')) !== ok) await setMeta('persisted', ok);
 })();
+
+aplicarTema();
+seguirSistema();
 
 if (getToken()) startSync();
 

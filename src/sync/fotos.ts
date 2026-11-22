@@ -17,7 +17,8 @@ export async function uploadPendingFotos(): Promise<void> {
   if (subiendo) return;
   subiendo = true;
   try {
-    const pendientes = (await db.fotos.where('url').equals('').toArray()).filter((f) => !f.deletedAt && f.blob);
+    // También las borradas antes de subirse: los borrados son lógicos y se guardan en la base.
+    const pendientes = (await db.fotos.where('url').equals('').toArray()).filter((f) => f.blob);
     if (pendientes.length === 0) return;
     const upload = await uploader();
     for (const foto of pendientes) {

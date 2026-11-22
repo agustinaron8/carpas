@@ -11,6 +11,18 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <title>Carpas</title>
+    <script>
+      // Tema antes del primer pintado, para que no parpadee. Ver src/lib/theme.ts.
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('carpas.tema'); } catch (e) {}
+        var dark = t === 'oscuro' || (t !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
+          document.documentElement.classList.add('dark');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f172a');
+        }
+      })();
+    </script>
   </head>
   <body class="bg-slate-50">
     <div id="root"></div>

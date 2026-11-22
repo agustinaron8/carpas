@@ -20,7 +20,7 @@ En desarrollo la contraseña es `carpas` (se cambia en `.env.local`, ver `.env.e
 
 ## Despliegue (Vercel)
 
-Publicado en https://carpas-ten.vercel.app (proyecto `carpas` del equipo `agustinaron8-5782`). Funciones, base (Neon) y fotos (Blob) en São Paulo (`gru1`).
+Publicado en https://carpas-grupo.vercel.app (proyecto `carpas` del equipo `agustinaron8-5782`). Funciones, base (Neon) y fotos (Blob) en São Paulo (`gru1`).
 
 Cómo se armó, por si hay que repetirlo:
 1. `vercel link`, y conectar el repo.
@@ -29,7 +29,7 @@ Cómo se armó, por si hay que repetirlo:
 4. `APP_PASSWORD` (la contraseña del grupo) y `AUTH_SECRET` (`openssl rand -base64 48`) como variables sensibles.
 5. `vercel env pull .env.production.local --environment production` y crear las tablas: `node --env-file=.env.production.local --import tsx scripts/migrate.ts` (Node 20+).
 6. Carga inicial desde el Docs (el .docx en `scripts/data/Carpas-2026.docx`):
-   `node --env-file=.env.production.local --import tsx scripts/import-docx.ts --api https://carpas-ten.vercel.app --password <clave>`.
+   `node --env-file=.env.production.local --import tsx scripts/import-docx.ts --api https://carpas-grupo.vercel.app --password <clave>`.
    Con `--dry-run` solo escribe el reporte en `scripts/data/import-report.md`. Después, borrar `.env.production.local`.
 
 Cada push a `main` despliega. `vercel.json` manda `/api/*` a la única función (`api/index.ts`, Hono) y el resto a `index.html`.
@@ -46,5 +46,24 @@ Cada push a `main` despliega. `vercel.json` manda `/api/*` a la única función 
 | Base | `server/db/` | Drizzle + Neon. Last-write-wins por `updatedAt`; el pull usa la hora del servidor |
 | PDFs | `src/pdf/` | pdfmake, carga perezosa. Ficha de revisión e inventario, generados en el celular |
 | Service worker | `src/sw.ts` | Precache de la app (incluido pdfmake) y cache-first para las fotos |
+
+## Recuperar algo borrado
+
+Nada se borra del todo: carpas, revisiones y fotos quedan en la base con `deleted_at`, y los archivos de las fotos siguen en Blob. Para recuperar algo, en la consola SQL de Neon (Vercel → Storage → carpas-db → Open in Neon):
+
+```sql
+-- Ver lo borrado
+SELECT id, codigo, nombre, to_timestamp(deleted_at / 1000) AS borrada FROM carpas WHERE deleted_at IS NOT NULL;
+SELECT r.id, c.nombre, r.fecha, to_timestamp(r.deleted_at / 1000) AS borrada
+  FROM revisiones r JOIN carpas c ON c.id = r.carpa_id WHERE r.deleted_at IS NOT NULL;
+
+-- Restaurar (cambiar la tabla y el id). Hay que actualizar las dos fechas para que los celulares lo bajen.
+UPDATE carpas SET deleted_at = NULL,
+  updated_at = (extract(epoch from now()) * 1000)::bigint,
+  server_updated_at = (extract(epoch from clock_timestamp()) * 1000)::bigint
+WHERE id = '...';
+```
+
+Al restaurar una revisión, restaurar también sus fotos (`fotos.revision_id`). Una carpa con el mismo código que otra viva no se puede restaurar hasta cambiarle el código.
 
 Cambios de esquema: editar `server/db/schema.ts`, `npm run db:generate` y `npm run db:migrate`.

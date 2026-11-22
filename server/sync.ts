@@ -30,11 +30,11 @@ function pgCode(err: unknown): string | undefined {
   return undefined;
 }
 
-export async function push(
-  db: Db,
-  items: { entidad: Entidad; row: Record<string, unknown> }[],
-  onFotoBorrada?: (foto: EntityMap['fotos']) => Promise<void>,
-): Promise<PushResult[]> {
+/**
+ * Los borrados son siempre lógicos: la fila queda con `deletedAt` (y la foto en Blob) para poder
+ * recuperarla desde la base. Ver "Recuperar algo borrado" en el README.
+ */
+export async function push(db: Db, items: { entidad: Entidad; row: Record<string, unknown> }[]): Promise<PushResult[]> {
   const ordered = [...items].sort((a, b) => ORDEN[a.entidad] - ORDEN[b.entidad]);
   const results: PushResult[] = [];
   for (const { entidad, row: raw } of ordered) {
@@ -64,9 +64,6 @@ export async function push(
         results.push({ entidad, id: row.id, ok: true, current: current ? (strip(current) as never) : undefined });
       } else {
         results.push({ entidad, id: row.id, ok: true });
-        if (entidad === 'fotos' && row.deletedAt && onFotoBorrada) {
-          await onFotoBorrada(row as EntityMap['fotos']).catch(() => undefined);
-        }
       }
     } catch (err) {
       if (pgCode(err) === '23505' && entidad === 'carpas') {

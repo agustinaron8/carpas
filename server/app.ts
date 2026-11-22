@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { del, issueSignedToken } from '@vercel/blob';
+import { issueSignedToken } from '@vercel/blob';
 import { handleUploadPresigned, type HandleUploadPresignedBody } from '@vercel/blob/client';
 import { pushBodySchema } from '../shared/validation.js';
 import { passwordOk, signToken, tokenOk } from './auth.js';
@@ -35,9 +35,7 @@ app.use('*', async (c, next) => {
 app.post('/sync/push', async (c) => {
   const parsed = pushBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: 'Pedido inválido' }, 400);
-  const results = await push(getDb(), parsed.data.items, async (foto) => {
-    if (blobConfigurado()) await del([foto.url, foto.thumbUrl]);
-  });
+  const results = await push(getDb(), parsed.data.items);
   return c.json({ results });
 });
 

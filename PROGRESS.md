@@ -1,6 +1,6 @@
 # Progreso
 
-**Estado: publicado en https://carpas-ten.vercel.app con los datos del Docs cargados. Falta probarlo en celulares reales.**
+**Estado: publicado en https://carpas-grupo.vercel.app con los datos del Docs cargados. Falta probarlo en celulares reales.**
 
 ## Pendiente de Agustín
 1. **Probar en celulares reales** (iPhone y Android): instalar en la pantalla de inicio, cargar en modo avión, volver a tener señal.

@@ -3,6 +3,8 @@ import { LogOut, RefreshCw, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db, getMeta } from '../db/dexie';
 import { usePending } from '../hooks/usePending';
+import { useTema } from '../hooks/useTema';
+import type { Tema } from '../lib/theme';
 import { setToken } from '../lib/api';
 import { haceCuanto, plural } from '../lib/format';
 import { resetCursor, syncNow, useSyncState } from '../sync/syncService';
@@ -11,6 +13,7 @@ export default function Ajustes() {
   const s = useSyncState();
   const pending = usePending();
   const nav = useNavigate();
+  const { tema, setTema } = useTema();
   const persisted = useLiveQuery(() => getMeta<boolean>('persisted'));
   const counts = useLiveQuery(async () => ({ carpas: await db.carpas.count(), revisiones: await db.revisiones.count(), fotos: await db.fotos.count() }));
 
@@ -36,6 +39,26 @@ export default function Ajustes() {
           <button className="btn-secondary" disabled={s.syncing} onClick={() => void resetCursor()}>
             Volver a bajar todo
           </button>
+        </div>
+      </section>
+      <section className="card space-y-2 p-4 text-sm">
+        <h2 className="font-semibold">Apariencia</h2>
+        <div className="flex gap-2">
+          {(
+            [
+              ['sistema', 'Como el celular'],
+              ['claro', 'Claro'],
+              ['oscuro', 'Oscuro'],
+            ] as [Tema, string][]
+          ).map(([v, l]) => (
+            <button
+              key={v}
+              onClick={() => setTema(v)}
+              className={`rounded-full border px-3 py-1.5 ${tema === v ? 'border-brand bg-brand text-on-brand' : 'border-slate-300 bg-white'}`}
+            >
+              {l}
+            </button>
+          ))}
         </div>
       </section>
       <section className="card space-y-1 p-4 text-sm">

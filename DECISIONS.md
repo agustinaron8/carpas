@@ -30,3 +30,6 @@
 - Deploy en la misma cuenta de Vercel que find-without-signal. La contraseña del grupo vive solo en `APP_PASSWORD` de Vercel.
 - Las fotos suben con URLs firmadas (`uploadPresigned` + `issueSignedToken`) usando OIDC, sin token de Blob fijo: es como Vercel conectó el store, y evita guardar un secreto permanente.
 - Todo en São Paulo (`gru1`): funciones, Neon y Blob, por cercanía con el grupo.
+- Borrados siempre lógicos (pedido del grupo): las filas quedan con `deletedAt` y los archivos de fotos no se borran de Blob. Una foto borrada antes de subirse se sube igual, marcada como borrada. Cómo recuperar: README.
+- Modo oscuro sin clases `dark:`: los colores de Tailwind son variables CSS y en `.dark` se invierte cada escala. Los botones principales usan `brand`, que no cambia. La preferencia (como el celular, claro u oscuro) se guarda en el dispositivo y se aplica antes del primer pintado.
+- Dirección: https://carpas-grupo.vercel.app (la anterior, carpas-ten.vercel.app, sigue andando).

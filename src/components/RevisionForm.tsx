@@ -245,7 +245,7 @@ export function RevisionForm({ carpa, revision, anterior, submitLabel, onSaved, 
                 type="button"
                 key={s}
                 onClick={() => setEstadoGeneral(s)}
-                className={`rounded-full border px-3 py-1.5 text-sm ${estadoGeneral === s ? 'border-green-700 bg-green-700 text-white' : 'border-slate-300 bg-white'}`}
+                className={`rounded-full border px-3 py-1.5 text-sm ${estadoGeneral === s ? 'border-brand bg-brand text-on-brand' : 'border-slate-300 bg-white'}`}
               >
                 {ESTADO_GENERAL_LABEL[s]}
               </button>

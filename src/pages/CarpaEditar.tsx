@@ -147,7 +147,7 @@ export default function CarpaEditar() {
               type="button"
               key={s}
               onClick={() => set('estadoGeneral', s)}
-              className={`rounded-full border px-3 py-1.5 text-sm ${form.estadoGeneral === s ? 'border-green-700 bg-green-700 text-white' : 'border-slate-300 bg-white'}`}
+              className={`rounded-full border px-3 py-1.5 text-sm ${form.estadoGeneral === s ? 'border-brand bg-brand text-on-brand' : 'border-slate-300 bg-white'}`}
             >
               {ESTADO_GENERAL_LABEL[s]}
             </button>

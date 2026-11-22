@@ -43,7 +43,7 @@ export default function Lote() {
           <span>{plural(guardadas, 'guardada', 'guardadas')}</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-          <div className="h-full bg-green-700 transition-all" style={{ width: `${(i / carpas.length) * 100}%` }} />
+          <div className="h-full bg-brand transition-all" style={{ width: `${(i / carpas.length) * 100}%` }} />
         </div>
         <h1 className="mt-3 text-xl font-semibold">
           <span className="mr-2 rounded bg-slate-800 px-2 py-0.5 font-mono text-base text-white">{actual.codigo}</span>

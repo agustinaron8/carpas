@@ -60,14 +60,9 @@ export async function deleteRevision(id: string): Promise<void> {
   await db.transaction('rw', db.revisiones, db.fotos, db.outbox, async () => {
     await db.revisiones.update(id, { deletedAt: now, updatedAt: now });
     await enqueue('revisiones', id, now);
-    // Sus fotos se van con ella.
+    // Sus fotos se van con ella (también en forma lógica).
     for (const f of await db.fotos.where('revisionId').equals(id).toArray()) {
-      if (f.deletedAt) continue;
-      if (!f.url) await db.fotos.delete(f.id);
-      else {
-        await db.fotos.update(f.id, { deletedAt: now, updatedAt: now, blob: undefined, thumbBlob: undefined });
-        await enqueue('fotos', f.id, now);
-      }
+      if (!f.deletedAt) await marcarFotoBorrada(f, now);
     }
   });
   notify();
@@ -111,13 +106,7 @@ export async function deleteFoto(id: string): Promise<void> {
   await db.transaction('rw', db.fotos, db.carpas, db.outbox, async () => {
     const foto = await db.fotos.get(id);
     if (!foto) return;
-    if (!foto.url) {
-      // Nunca se subió: alcanza con borrarla de este celular.
-      await db.fotos.delete(id);
-    } else {
-      await db.fotos.update(id, { deletedAt: now, updatedAt: now, blob: undefined, thumbBlob: undefined });
-      await enqueue('fotos', id, now);
-    }
+    await marcarFotoBorrada(foto, now);
     const carpa = await db.carpas.get(foto.carpaId);
     if (carpa?.fotoPrincipalId === id) {
       const otra = (await db.fotos.where('carpaId').equals(foto.carpaId).toArray())
@@ -133,6 +122,19 @@ export async function deleteFoto(id: string): Promise<void> {
 export async function setFotoPrincipal(carpaId: string, fotoId: string): Promise<void> {
   const carpa = await db.carpas.get(carpaId);
   if (carpa) await saveCarpa({ ...carpa, fotoPrincipalId: fotoId });
+}
+
+/**
+ * Borrado lógico: nunca se pierde una foto. Si ya está en Blob, se libera el espacio en el celular;
+ * si no, se guarda para subirla igual (marcada como borrada) y poder recuperarla desde la base.
+ */
+async function marcarFotoBorrada(foto: LocalFoto, now: number) {
+  if (foto.url) {
+    await db.fotos.update(foto.id, { deletedAt: now, updatedAt: now, blob: undefined, thumbBlob: undefined });
+    await enqueue('fotos', foto.id, now);
+  } else {
+    await db.fotos.update(foto.id, { deletedAt: now, updatedAt: now });
+  }
 }
 
 /** Marca la foto como subida y la encola para que viaje su fila. */
