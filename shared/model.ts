@@ -144,9 +144,11 @@ export interface EventoCarpa extends Auditable {
   eventoId: string;
   carpaId: string | null;
   nombre: string | null;
+  /** Prestadas: nombre y tribu de quien la presta. Solo en la app, no en la lista impresa. */
   prestadaPor: string | null;
+  prestadaPorTribu: string | null;
   capacidad: number | null;
-  /** Prestadas: si ya se devolvió. */
+  /** Prestadas: si ya se devolvió. Solo en la app. */
   devuelta: boolean;
   /** Tribu (o grupo) que la usa. */
   tribu: string | null;

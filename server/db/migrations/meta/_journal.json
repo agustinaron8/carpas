@@ -29,6 +29,13 @@
       "when": 1795470319301,
       "tag": "0003_eventos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795470869895,
+      "tag": "0004_prestada_por_tribu",
+      "breakpoints": true
     }
   ]
 }

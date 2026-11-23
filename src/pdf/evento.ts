@@ -119,26 +119,22 @@ export function listaContent(evento: Evento, propias: EventoCarpa[], prestadas: 
         {
           stack: [{ text: nombreDe(ec, carpas) }, ...(ec.capacidad ? [{ text: `${ec.capacidad} pers.`, fontSize: 7, color: '#64748b' }] : [])],
         },
-        { text: ec.prestadaPor ?? '', fontSize: 9 },
         { text: ec.tribu ?? '' },
         { text: cantidadTexto(ec), alignment: 'center' },
         { text: ec.dirigente ?? '' },
         { text: ec.observaciones ?? '', fontSize: 8 },
-        { text: ec.devuelta ? 'Sí' : '', alignment: 'center', fontSize: 8 },
       ]);
       content.push(
         tabla(
           [
             th('Carpa'),
-            th('Prestada por'),
             th('Tribu'),
             th('Cant.', { alignment: 'center' }),
             th('Dirigente a cargo'),
             th('Observaciones'),
-            th('Devuelta', { alignment: 'center', fontSize: 7 }),
           ],
           body,
-          [88, 66, 66, 30, 80, '*', 34],
+          [118, 80, 34, 96, '*'],
           bandas(pr, orden),
         ),
         { text: totalTexto(pr, carpas), fontSize: 8, color: '#334155', alignment: 'right', margin: [0, 3, 0, 0] },

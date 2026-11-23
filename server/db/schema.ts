@@ -103,6 +103,7 @@ export const eventoCarpas = pgTable(
     carpaId: uuid(),
     nombre: text(),
     prestadaPor: text(),
+    prestadaPorTribu: text(),
     capacidad: integer(),
     devuelta: boolean().notNull().default(false),
     tribu: text(),

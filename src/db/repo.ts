@@ -193,6 +193,7 @@ export function eventoCarpaVacia(eventoId: string, id: string, carpaId: string |
     carpaId,
     nombre: null,
     prestadaPor: null,
+    prestadaPorTribu: null,
     capacidad: null,
     devuelta: false,
     tribu: null,

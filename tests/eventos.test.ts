@@ -24,6 +24,7 @@ const ec = (eventoId: string, over: Partial<EventoCarpa> = {}): EventoCarpa => (
   carpaId: null,
   nombre: null,
   prestadaPor: null,
+  prestadaPorTribu: null,
   capacidad: null,
   devuelta: false,
   tribu: null,
@@ -60,7 +61,7 @@ describe('sync de eventos', () => {
   it('sube y baja eventos y sus carpas (propias y prestadas)', async () => {
     const ev = evento();
     const propia = ec(ev.id, { carpaId: crypto.randomUUID(), tribu: 'Picunches', cantidad: 7, genero: 'm', dirigente: 'Bri' });
-    const prestada = ec(ev.id, { nombre: 'Iglú verde', prestadaPor: 'Familia Pérez', capacidad: 4 });
+    const prestada = ec(ev.id, { nombre: 'Iglú verde', prestadaPor: 'Juan Pérez', prestadaPorTribu: 'Comechingón', capacidad: 4, devuelta: true });
     const r = await push(db, [
       { entidad: 'eventoCarpas', row: propia as never },
       { entidad: 'eventos', row: ev as never },

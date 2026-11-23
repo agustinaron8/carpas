@@ -160,6 +160,7 @@ export function EventoCarpaForm({
   const [f, setF] = useState({
     nombre: inicial.nombre ?? '',
     prestadaPor: inicial.prestadaPor ?? '',
+    prestadaPorTribu: inicial.prestadaPorTribu ?? '',
     capacidad: inicial.capacidad?.toString() ?? '',
     devuelta: inicial.devuelta,
     tribu: inicial.tribu ?? '',
@@ -182,6 +183,7 @@ export function EventoCarpaForm({
         ...inicial,
         nombre: prestada ? txt(f.nombre) : null,
         prestadaPor: prestada ? txt(f.prestadaPor) : null,
+        prestadaPorTribu: prestada ? txt(f.prestadaPorTribu) : null,
         capacidad: prestada ? entero(f.capacidad) : null,
         devuelta: prestada && f.devuelta,
         tribu: txt(f.tribu),
@@ -224,20 +226,60 @@ export function EventoCarpaForm({
                 autoFocus={nueva}
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <label className="label" htmlFor="ec-por">
-                  Prestada por
-                </label>
-                <input id="ec-por" className="input" maxLength={120} value={f.prestadaPor} onChange={(e) => set('prestadaPor', e.target.value)} placeholder="Familia, otro grupo…" />
+            <div>
+              <label className="label" htmlFor="ec-cap">
+                Capacidad (personas)
+              </label>
+              <input id="ec-cap" className="input w-28" type="number" inputMode="numeric" min={0} max={1000} value={f.capacidad} onChange={(e) => set('capacidad', e.target.value)} />
+            </div>
+            <fieldset className="space-y-3 rounded-lg border border-amber-300 bg-amber-50/60 p-3">
+              <legend className="px-1 text-sm font-semibold text-amber-900">Préstamo</legend>
+              <p className="-mt-1 text-xs text-slate-500">Para el seguimiento: no sale en la lista impresa.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label" htmlFor="ec-por">
+                    Quién la presta
+                  </label>
+                  <input id="ec-por" className="input" maxLength={120} value={f.prestadaPor} onChange={(e) => set('prestadaPor', e.target.value)} placeholder="Nombre" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="ec-por-tribu">
+                    Su tribu
+                  </label>
+                  <input
+                    id="ec-por-tribu"
+                    className="input"
+                    list="ec-tribus"
+                    maxLength={120}
+                    value={f.prestadaPorTribu}
+                    onChange={(e) => set('prestadaPorTribu', e.target.value)}
+                  />
+                </div>
               </div>
               <div>
-                <label className="label" htmlFor="ec-cap">
-                  Capacidad
-                </label>
-                <input id="ec-cap" className="input" type="number" inputMode="numeric" min={0} max={1000} value={f.capacidad} onChange={(e) => set('capacidad', e.target.value)} />
+                <span className="label">¿Se devolvió?</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      [false, 'No'],
+                      [true, 'Sí, devuelta'],
+                    ] as const
+                  ).map(([v, l]) => (
+                    <button
+                      type="button"
+                      key={l}
+                      aria-pressed={f.devuelta === v}
+                      onClick={() => set('devuelta', v)}
+                      className={`rounded-lg border py-2 text-sm font-medium ${
+                        f.devuelta === v ? (v ? 'border-green-600 bg-green-600 text-white' : 'border-amber-500 bg-amber-100 text-amber-900') : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            </fieldset>
           </>
         ) : (
           carpa && (
@@ -252,7 +294,7 @@ export function EventoCarpaForm({
         )}
         <div>
           <label className="label" htmlFor="ec-tribu">
-            Tribu
+            Tribu que la usa
           </label>
           <input id="ec-tribu" className="input" list="ec-tribus" maxLength={120} value={f.tribu} onChange={(e) => set('tribu', e.target.value)} />
           <datalist id="ec-tribus">
@@ -302,12 +344,6 @@ export function EventoCarpaForm({
           </label>
           <textarea id="ec-obs" className="input min-h-16" maxLength={2000} value={f.observaciones} onChange={(e) => set('observaciones', e.target.value)} />
         </div>
-        {prestada && !nueva && (
-          <label className="flex items-center gap-3">
-            <input type="checkbox" className="size-4" checked={f.devuelta} onChange={(e) => set('devuelta', e.target.checked)} />
-            <span className="font-medium">Ya se devolvió</span>
-          </label>
-        )}
         <div className="flex gap-2 pt-1">
           <button type="button" className="btn-secondary flex-1" onClick={onClose}>
             Cancelar

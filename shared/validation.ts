@@ -73,6 +73,7 @@ export const eventoCarpaSchema = z.object({
   carpaId: z.string().uuid().nullable(),
   nombre: texto(120),
   prestadaPor: texto(120),
+  prestadaPorTribu: texto(120).default(null),
   capacidad: z.number().int().min(0).max(1000).nullable(),
   devuelta: z.boolean(),
   tribu: texto(120),

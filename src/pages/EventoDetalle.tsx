@@ -118,7 +118,7 @@ export default function EventoDetalle() {
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-1">
           <h2 className="font-semibold text-green-800">Del grupo ({propias.length})</h2>
-          <button className="btn-ghost text-sm font-medium text-green-800" onClick={() => setDialogo({ tipo: 'agregar' })}>
+          <button className="btn-ghost shrink-0 whitespace-nowrap text-sm font-medium text-green-800" onClick={() => setDialogo({ tipo: 'agregar' })}>
             <Plus size={16} /> Agregar del inventario
           </button>
         </div>
@@ -148,12 +148,14 @@ export default function EventoDetalle() {
         <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-1">
           <h2 className="font-semibold text-green-800">
             Prestadas ({prestadas.length})
-            {sinDevolver > 0 && sinDevolver < prestadas.length && (
-              <span className="ml-1 text-sm font-normal text-slate-500">· {sinDevolver} sin devolver</span>
+            {prestadas.length > 0 && (
+              <span className={`block text-xs font-medium ${sinDevolver ? 'text-amber-700' : 'text-slate-500'}`}>
+                {sinDevolver === 0 ? 'Todas devueltas' : `${sinDevolver} sin devolver`}
+              </span>
             )}
           </h2>
           <button
-            className="btn-ghost text-sm font-medium text-green-800"
+            className="btn-ghost shrink-0 whitespace-nowrap text-sm font-medium text-green-800"
             onClick={() => setDialogo({ tipo: 'editar', ec: eventoCarpaVacia(evento.id, uuid(), null) })}
           >
             <Plus size={16} /> Agregar prestada
@@ -167,10 +169,12 @@ export default function EventoDetalle() {
               <Fila key={ec.id} ec={ec} onClick={() => setDialogo({ tipo: 'editar', ec })} pendiente={pending.byId.get(ec.id)}>
                 <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">Prestada</span>
                 <span className="min-w-0 flex-1 truncate font-medium">{nombreDe(ec, carpas)}</span>
-                {ec.devuelta && (
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-green-700">
+                {ec.devuelta ? (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                     <Undo2 size={12} /> Devuelta
                   </span>
+                ) : (
+                  <span className="shrink-0 rounded-full border border-amber-300 px-2 py-0.5 text-xs font-medium text-amber-800">Sin devolver</span>
                 )}
               </Fila>
             ))}
@@ -213,7 +217,8 @@ function Fila({
   pendiente: { error: string | null } | undefined;
   children: React.ReactNode;
 }) {
-  const detalle = [ec.tribu, cantidadTexto(ec) && `${cantidadTexto(ec)}`, ec.dirigente, !ec.carpaId && ec.prestadaPor && `de ${ec.prestadaPor}`].filter(Boolean);
+  const detalle = [ec.tribu, cantidadTexto(ec), ec.dirigente].filter(Boolean);
+  const presta = [ec.prestadaPor, ec.prestadaPorTribu && `(${ec.prestadaPorTribu})`].filter(Boolean).join(' ');
   return (
     <li>
       <button className="w-full px-3 py-2.5 text-left" onClick={onClick}>
@@ -224,6 +229,7 @@ function Fila({
         <span className="mt-0.5 block truncate text-sm text-slate-600">
           {detalle.length ? detalle.join(' · ') : <span className="text-slate-400">Sin tribu ni dirigente asignados</span>}
         </span>
+        {!ec.carpaId && presta && <span className="mt-0.5 block truncate text-xs text-amber-800">La presta: {presta}</span>}
         {ec.observaciones && <span className="mt-0.5 block truncate text-xs text-slate-500">{ec.observaciones}</span>}
       </button>
     </li>

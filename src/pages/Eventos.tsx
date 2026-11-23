@@ -14,11 +14,14 @@ export default function Eventos() {
   const pending = usePending();
   const data = useLiveQuery(async () => {
     const [eventos, ecs] = await Promise.all([eventosVivos(), db.eventoCarpas.toArray()]);
-    const cuenta = new Map<string, { propias: number; prestadas: number }>();
+    const cuenta = new Map<string, { propias: number; prestadas: number; sinDevolver: number }>();
     for (const ec of vivas(ecs)) {
-      const c = cuenta.get(ec.eventoId) ?? { propias: 0, prestadas: 0 };
+      const c = cuenta.get(ec.eventoId) ?? { propias: 0, prestadas: 0, sinDevolver: 0 };
       if (ec.carpaId) c.propias++;
-      else c.prestadas++;
+      else {
+        c.prestadas++;
+        if (!ec.devuelta) c.sinDevolver++;
+      }
       cuenta.set(ec.eventoId, c);
     }
     return { eventos, cuenta };
@@ -46,7 +49,7 @@ export default function Eventos() {
       ) : (
         <ul className="space-y-3">
           {data.eventos.map((ev) => {
-            const c = data.cuenta.get(ev.id) ?? { propias: 0, prestadas: 0 };
+            const c = data.cuenta.get(ev.id) ?? { propias: 0, prestadas: 0, sinDevolver: 0 };
             const fin = ev.fechaFin ?? ev.fechaInicio;
             const pasado = Boolean(fin && fin < hoy);
             const enCurso = Boolean(ev.fechaInicio && ev.fechaInicio <= hoy && fin && fin >= hoy);
@@ -72,6 +75,7 @@ export default function Eventos() {
                   </span>
                   <span className="mt-1 block text-xs text-slate-500">
                     {plural(c.propias, 'carpa del grupo', 'carpas del grupo')} · {plural(c.prestadas, 'prestada', 'prestadas')}
+                    {c.sinDevolver > 0 && <span className="font-medium text-amber-700"> ({c.sinDevolver} sin devolver)</span>}
                   </span>
                 </Link>
               </li>

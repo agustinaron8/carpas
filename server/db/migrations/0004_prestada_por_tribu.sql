@@ -1,0 +1,1 @@
+ALTER TABLE "evento_carpas" ADD COLUMN "prestada_por_tribu" text;
