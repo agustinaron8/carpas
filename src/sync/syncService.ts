@@ -1,6 +1,6 @@
 // Sube el outbox, baja lo nuevo y sube las fotos pendientes.
 import { useSyncExternalStore } from 'react';
-import type { Entidad, EntityMap, PullResponse, PushItem, PushResult } from '../../shared/model';
+import { ENTIDADES, type Entidad, type EntityMap, type PullResponse, type PushItem, type PushResult } from '../../shared/model';
 import { db, getMeta, setMeta, type LocalFoto } from '../db/dexie';
 import { onLocalWrite } from '../db/repo';
 import { api, AuthError, edadToken, getToken, NetworkError, renovarToken } from '../lib/api';
@@ -128,7 +128,7 @@ async function pushOutbox(): Promise<number> {
       body: JSON.stringify({ items }),
     });
     const sent = new Map(chunk.map((e) => [e.key, e.updatedAt]));
-    await db.transaction('rw', [db.outbox, db.carpas, db.fotos, db.revisiones], async () => {
+    await db.transaction('rw', [db.outbox, ...ENTIDADES.map((e) => db.table(e))], async () => {
       for (const r of results) {
         const key = `${r.entidad}:${r.id}`;
         const entry = await db.outbox.get(key);
@@ -163,10 +163,11 @@ async function applyRow(entidad: Entidad, row: EntityMap[Entidad]) {
 async function pullChanges() {
   const since = (await getMeta<number>('cursor')) ?? 0;
   const res = await api<PullResponse>(`/sync/pull?since=${since}`, {}, 45_000);
-  await db.transaction('rw', [db.outbox, db.carpas, db.fotos, db.revisiones, db.meta], async () => {
+  await db.transaction('rw', [db.outbox, db.meta, ...ENTIDADES.map((e) => db.table(e))], async () => {
     const pendientes = new Set((await db.outbox.toArray()).map((e) => e.key));
-    for (const entidad of ['carpas', 'fotos', 'revisiones'] as const) {
-      for (const row of res[entidad]) {
+    for (const entidad of ENTIDADES) {
+      // `?? []`: un servidor anterior no manda las entidades nuevas.
+      for (const row of res[entidad] ?? []) {
         // Lo que todavía no subimos gana: el servidor decide al recibirlo.
         if (pendientes.has(`${entidad}:${row.id}`)) continue;
         const local = (await db.table(entidad).get(row.id)) as { updatedAt: number } | undefined;

@@ -29,6 +29,11 @@ En producción (22/11): login, 33 carpas con fotos, revisión con foto subida de
 
 Revisión de exports (22/11), en local y en producción, abriendo cada PDF y verificando su contenido: inventario (todas, solo estado actual, sin fotos, elegidas, con filtro, una carpa con todo el historial y fotos de revisión), fichas (todas, sin precarga, 2 por hoja, selección, carpa sin revisiones, textos extremos). Los QR se leen con un lector automático y llevan a la carpa correcta. Sin conexión: inventario con fotos y fichas.
 
+- Eventos (23/11): pestaña "Eventos" junto a "Carpas". Cada evento (nombre, fechas, lugar, notas) tiene carpas del inventario asignadas y carpas prestadas solo para ese evento, con tribu, cantidad (M/V), dirigente a cargo y observaciones. "Lista para imprimir": PDF con las del grupo y las prestadas en tablas separadas y una columna de observaciones para anotar a mano. Desde el evento también se imprimen las fichas y se exporta el inventario de sus carpas.
+- Filtro por estado (Lista, Revisar, Reparar, Baja) en todos los diálogos de imprimir y exportar, con atajo "Solo las listas". Al agregar carpas a un evento arranca mostrando solo las listas.
+
+Probado en Chromium (390 px, claro y oscuro): crear evento, agregar 7 carpas del inventario, editar dos, agregar una prestada, lista PDF (revisada a ojo), fichas del evento y pendientes. 20 tests.
+
 ## Falta
 - Hito 9: probar en un celular real en modo avión, Lighthouse.
 - A decidir al probar la app: deslizar para actualizar, y Background Sync en Android.

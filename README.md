@@ -44,12 +44,13 @@ Cada push a `main` despliega. `vercel.json` manda `/api/*` a la única función 
 | Fotos | `src/sync/fotos.ts` | Comprime (1600 px y miniatura de 400 px), guarda en el celular y sube a Blob |
 | API | `server/app.ts` | Login, `sync/push`, `sync/pull`, token para subir a Blob |
 | Base | `server/db/` | Drizzle + Neon. Last-write-wins por `updatedAt`; el pull usa la hora del servidor |
-| PDFs | `src/pdf/` | pdfmake, carga perezosa. Ficha de revisión e inventario, generados en el celular |
+| PDFs | `src/pdf/` | pdfmake, carga perezosa. Ficha de revisión, inventario y lista de un evento, generados en el celular |
+| Eventos | `src/pages/Evento*.tsx` | Campamentos: carpas del inventario asignadas y prestadas (`evento_carpas` sin `carpa_id`) |
 | Service worker | `src/sw.ts` | Precache de la app (incluido pdfmake) y cache-first para las fotos |
 
 ## Recuperar algo borrado
 
-Nada se borra del todo: carpas, revisiones y fotos quedan en la base con `deleted_at`, y los archivos de las fotos siguen en Blob. Para recuperar algo, en la consola SQL de Neon (Vercel → Storage → carpas-db → Open in Neon):
+Nada se borra del todo: carpas, revisiones, fotos, eventos y carpas de un evento quedan en la base con `deleted_at`, y los archivos de las fotos siguen en Blob. Para recuperar algo, en la consola SQL de Neon (Vercel → Storage → carpas-db → Open in Neon):
 
 ```sql
 -- Ver lo borrado
@@ -64,6 +65,6 @@ UPDATE carpas SET deleted_at = NULL,
 WHERE id = '...';
 ```
 
-Al restaurar una revisión, restaurar también sus fotos (`fotos.revision_id`). Una carpa con el mismo código que otra viva no se puede restaurar hasta cambiarle el código.
+Al restaurar una revisión, restaurar también sus fotos (`fotos.revision_id`); al restaurar un evento, sus filas de `evento_carpas`. Una carpa con el mismo código que otra viva no se puede restaurar hasta cambiarle el código.
 
 Cambios de esquema: editar `server/db/schema.ts`, `npm run db:generate` y `npm run db:migrate`.

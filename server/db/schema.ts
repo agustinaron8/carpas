@@ -1,7 +1,7 @@
 // Esquema de Postgres. Las columnas se nombran en snake_case (casing de Drizzle).
 import { sql } from 'drizzle-orm';
-import { bigint, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { ESTADOS, ESTADOS_GENERALES, TIPOS } from '../../shared/model.js';
+import { bigint, boolean, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { ESTADOS, ESTADOS_GENERALES, GENEROS, TIPOS } from '../../shared/model.js';
 
 const ms = (name?: string) => (name ? bigint(name, { mode: 'number' }) : bigint({ mode: 'number' }));
 
@@ -82,4 +82,36 @@ export const revisiones = pgTable(
   (t) => [index('revisiones_carpa').on(t.carpaId, t.fecha), index('revisiones_sync').on(t.serverUpdatedAt)],
 );
 
-export const tables = { carpas, fotos, revisiones } as const;
+export const eventos = pgTable(
+  'eventos',
+  {
+    ...auditable,
+    nombre: text().notNull(),
+    fechaInicio: text(),
+    fechaFin: text(),
+    lugar: text(),
+    notas: text(),
+  },
+  (t) => [index('eventos_sync').on(t.serverUpdatedAt)],
+);
+
+export const eventoCarpas = pgTable(
+  'evento_carpas',
+  {
+    ...auditable,
+    eventoId: uuid().notNull(),
+    carpaId: uuid(),
+    nombre: text(),
+    prestadaPor: text(),
+    capacidad: integer(),
+    devuelta: boolean().notNull().default(false),
+    tribu: text(),
+    cantidad: integer(),
+    genero: text({ enum: GENEROS }),
+    dirigente: text(),
+    observaciones: text(),
+  },
+  (t) => [index('evento_carpas_evento').on(t.eventoId), index('evento_carpas_sync').on(t.serverUpdatedAt)],
+);
+
+export const tables = { carpas, fotos, revisiones, eventos, eventoCarpas } as const;

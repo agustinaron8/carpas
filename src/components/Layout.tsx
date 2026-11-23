@@ -8,6 +8,9 @@ import { UpdatePrompt } from './UpdatePrompt';
 function pantallaAnterior(path: string): string {
   const m = path.match(/^\/carpas\/([^/]+)\/(editar|revision\/nueva)$/);
   if (m && m[1] !== 'nueva') return `/carpas/${m[1]}`;
+  const ev = path.match(/^\/eventos\/([^/]+)\/editar$/);
+  if (ev) return `/eventos/${ev[1]}`;
+  if (path.startsWith('/eventos/')) return '/eventos';
   return '/';
 }
 
@@ -32,7 +35,8 @@ function BotonVolver() {
 
 export function Layout() {
   const { oscuro, setTema } = useTema();
-  const enInicio = useLocation().pathname === '/';
+  const { pathname } = useLocation();
+  const enInicio = pathname === '/' || pathname === '/eventos';
   return (
     <div className="mx-auto min-h-screen max-w-3xl pb-24">
       <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-slate-200 bg-white/95 px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur">

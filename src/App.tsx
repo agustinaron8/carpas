@@ -12,6 +12,9 @@ const RevisionPage = lazy(() => import('./pages/RevisionPage'));
 const Lote = lazy(() => import('./pages/Lote'));
 const Pendientes = lazy(() => import('./pages/Pendientes'));
 const Ajustes = lazy(() => import('./pages/Ajustes'));
+const Eventos = lazy(() => import('./pages/Eventos'));
+const EventoDetalle = lazy(() => import('./pages/EventoDetalle'));
+const EventoEditar = lazy(() => import('./pages/EventoEditar'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const loc = useLocation();
@@ -46,6 +49,10 @@ export function App() {
               <Route path="carpas/:id/revision/nueva" element={<RevisionPage />} />
               <Route path="revisiones/:revisionId/editar" element={<RevisionPage />} />
               <Route path="r/:id" element={<DesdeQr />} />
+              <Route path="eventos" element={<Eventos />} />
+              <Route path="eventos/nuevo" element={<EventoEditar />} />
+              <Route path="eventos/:id" element={<EventoDetalle />} />
+              <Route path="eventos/:id/editar" element={<EventoEditar />} />
               <Route path="lote" element={<Lote />} />
               <Route path="pendientes" element={<Pendientes />} />
               <Route path="ajustes" element={<Ajustes />} />

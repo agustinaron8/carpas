@@ -1,6 +1,6 @@
 // IndexedDB: fuente de verdad de la UI. Cada escritura deja una entrada en `outbox`.
 import Dexie, { type EntityTable } from 'dexie';
-import type { Carpa, Entidad, Foto, Revision } from '../../shared/model';
+import type { Carpa, Entidad, Evento, EventoCarpa, Foto, Revision } from '../../shared/model';
 
 /** Foto local: `url` y `thumbUrl` quedan vacíos hasta que se sube a Blob. */
 export interface LocalFoto extends Foto {
@@ -28,6 +28,8 @@ export const db = new Dexie('carpas') as Dexie & {
   carpas: EntityTable<Carpa, 'id'>;
   fotos: EntityTable<LocalFoto, 'id'>;
   revisiones: EntityTable<Revision, 'id'>;
+  eventos: EntityTable<Evento, 'id'>;
+  eventoCarpas: EntityTable<EventoCarpa, 'id'>;
   outbox: EntityTable<OutboxEntry, 'key'>;
   meta: EntityTable<Meta, 'key'>;
 };
@@ -51,6 +53,9 @@ db.version(2)
         f.revisionId ??= null;
       }),
   );
+
+// v3: eventos (campamentos) y las carpas que se usan en cada uno, propias o prestadas.
+db.version(3).stores({ eventos: 'id', eventoCarpas: 'id, eventoId, carpaId' });
 
 export async function getMeta<T>(key: string): Promise<T | undefined> {
   return (await db.meta.get(key))?.value as T | undefined;

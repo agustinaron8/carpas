@@ -1,4 +1,4 @@
-import type { Carpa, Revision } from '../../shared/model';
+import type { Carpa, Evento, Revision } from '../../shared/model';
 import { db } from './dexie';
 
 export const vivas = <T extends { deletedAt: number | null }>(rows: T[]) => rows.filter((r) => !r.deletedAt);
@@ -54,4 +54,27 @@ export async function fotosPorRevision(carpaId: string) {
   const fotos = vivas(await db.fotos.where('carpaId').equals(carpaId).toArray()).sort((a, b) => a.orden - b.orden);
   for (const f of fotos) if (f.revisionId) map.set(f.revisionId, [...(map.get(f.revisionId) ?? []), f]);
   return map;
+}
+
+/** Más nuevos primero; los que no tienen fecha, al final por nombre. */
+export function compararEventos(a: Evento, b: Evento): number {
+  if (a.fechaInicio && b.fechaInicio) return b.fechaInicio.localeCompare(a.fechaInicio) || a.nombre.localeCompare(b.nombre, 'es');
+  if (a.fechaInicio || b.fechaInicio) return a.fechaInicio ? -1 : 1;
+  return b.createdAt - a.createdAt;
+}
+
+export async function eventosVivos(): Promise<Evento[]> {
+  return vivas(await db.eventos.toArray()).sort(compararEventos);
+}
+
+export async function carpasDeEvento(eventoId: string) {
+  return vivas(await db.eventoCarpas.where('eventoId').equals(eventoId).toArray());
+}
+
+/** Los rangos de fecha se pisan (si a alguno le falta fecha, no se puede saber: no). */
+export function sePisan(a: Evento, b: Evento): boolean {
+  if (!a.fechaInicio || !b.fechaInicio) return false;
+  const finA = a.fechaFin ?? a.fechaInicio;
+  const finB = b.fechaFin ?? b.fechaInicio;
+  return a.fechaInicio <= finB && b.fechaInicio <= finA;
 }

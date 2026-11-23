@@ -1,5 +1,5 @@
 // Escrituras de la app. Todas pasan por acá para que quede la entrada en el outbox.
-import type { Carpa, Entidad, Revision } from '../../shared/model';
+import type { Carpa, Entidad, Evento, EventoCarpa, Revision } from '../../shared/model';
 import { db, type LocalFoto } from './dexie';
 
 type Listener = () => void;
@@ -144,4 +144,85 @@ export async function markFotoUploaded(id: string, url: string, thumbUrl: string
     await db.fotos.update(id, { url, thumbUrl, updatedAt: now, uploadError: null });
     await enqueue('fotos', id, now);
   });
+}
+
+type Nuevo<T> = Omit<T, 'createdAt' | 'updatedAt' | 'deletedAt'> & Partial<T>;
+
+export async function saveEvento(data: Nuevo<Evento>): Promise<Evento> {
+  const now = Date.now();
+  const ev: Evento = { ...data, createdAt: data.createdAt ?? now, updatedAt: now, deletedAt: data.deletedAt ?? null };
+  await db.transaction('rw', db.eventos, db.outbox, async () => {
+    await db.eventos.put(ev);
+    await enqueue('eventos', ev.id, now);
+  });
+  notify();
+  return ev;
+}
+
+/** Borra el evento y sus carpas (todo lógico). Las carpas del inventario no se tocan. */
+export async function deleteEvento(id: string): Promise<void> {
+  const now = Date.now();
+  await db.transaction('rw', db.eventos, db.eventoCarpas, db.outbox, async () => {
+    await db.eventos.update(id, { deletedAt: now, updatedAt: now });
+    await enqueue('eventos', id, now);
+    for (const ec of await db.eventoCarpas.where('eventoId').equals(id).toArray()) {
+      if (ec.deletedAt) continue;
+      await db.eventoCarpas.update(ec.id, { deletedAt: now, updatedAt: now });
+      await enqueue('eventoCarpas', ec.id, now);
+    }
+  });
+  notify();
+}
+
+/**
+ * Id fijo para (evento, carpa del inventario): si dos celulares la agregan sin señal, queda una sola
+ * fila; y si se quita y se vuelve a agregar, revive la misma.
+ */
+export async function idEventoCarpa(eventoId: string, carpaId: string): Promise<string> {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${eventoId}:${carpaId}`)));
+  h[6] = (h[6] & 0x0f) | 0x50;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const x = [...h.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
+}
+
+export function eventoCarpaVacia(eventoId: string, id: string, carpaId: string | null): EventoCarpa {
+  return {
+    id,
+    eventoId,
+    carpaId,
+    nombre: null,
+    prestadaPor: null,
+    capacidad: null,
+    devuelta: false,
+    tribu: null,
+    cantidad: null,
+    genero: null,
+    dirigente: null,
+    observaciones: null,
+    createdAt: 0,
+    updatedAt: 0,
+    deletedAt: null,
+  };
+}
+
+/** Guarda varias a la vez (ej. al agregar carpas del inventario). */
+export async function saveEventoCarpas(rows: EventoCarpa[]): Promise<void> {
+  const now = Date.now();
+  await db.transaction('rw', db.eventoCarpas, db.outbox, async () => {
+    for (const r of rows) {
+      await db.eventoCarpas.put({ ...r, createdAt: r.createdAt || now, updatedAt: now });
+      await enqueue('eventoCarpas', r.id, now);
+    }
+  });
+  notify();
+}
+
+export async function deleteEventoCarpa(id: string): Promise<void> {
+  const now = Date.now();
+  await db.transaction('rw', db.eventoCarpas, db.outbox, async () => {
+    await db.eventoCarpas.update(id, { deletedAt: now, updatedAt: now });
+    await enqueue('eventoCarpas', id, now);
+  });
+  notify();
 }

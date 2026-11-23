@@ -122,13 +122,49 @@ export function estadoActual(carpa: Pick<Carpa, 'estadoActual' | 'estadoActualEn
   return undefined;
 }
 
-export type Entidad = 'carpas' | 'fotos' | 'revisiones';
-export const ENTIDADES: readonly Entidad[] = ['carpas', 'fotos', 'revisiones'];
+export const GENEROS = ['m', 'v'] as const;
+export type Genero = (typeof GENEROS)[number];
+export const GENERO_LABEL: Record<Genero, string> = { m: 'Mujeres', v: 'Varones' };
+
+/** Un campamento u otra salida en la que se usan carpas. */
+export interface Evento extends Auditable {
+  nombre: string;
+  /** `YYYY-MM-DD`. */
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  lugar: string | null;
+  notas: string | null;
+}
+
+/**
+ * Una carpa que se usa en un evento. Con `carpaId` es del inventario; sin él es prestada solo para
+ * ese evento y se describe con `nombre`, `prestadaPor` y `capacidad`.
+ */
+export interface EventoCarpa extends Auditable {
+  eventoId: string;
+  carpaId: string | null;
+  nombre: string | null;
+  prestadaPor: string | null;
+  capacidad: number | null;
+  /** Prestadas: si ya se devolvió. */
+  devuelta: boolean;
+  /** Tribu (o grupo) que la usa. */
+  tribu: string | null;
+  cantidad: number | null;
+  genero: Genero | null;
+  dirigente: string | null;
+  observaciones: string | null;
+}
+
+export type Entidad = 'carpas' | 'fotos' | 'revisiones' | 'eventos' | 'eventoCarpas';
+export const ENTIDADES: readonly Entidad[] = ['carpas', 'fotos', 'revisiones', 'eventos', 'eventoCarpas'];
 
 export interface EntityMap {
   carpas: Carpa;
   fotos: Foto;
   revisiones: Revision;
+  eventos: Evento;
+  eventoCarpas: EventoCarpa;
 }
 
 export interface PushItem<E extends Entidad = Entidad> {
@@ -145,6 +181,8 @@ export interface PullResponse {
   carpas: Carpa[];
   fotos: Foto[];
   revisiones: Revision[];
+  eventos: Evento[];
+  eventoCarpas: EventoCarpa[];
 }
 
 export function componentesConProblema(r: EstadoComponentes | undefined): Componente[] {

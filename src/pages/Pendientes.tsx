@@ -31,6 +31,18 @@ export default function Pendientes() {
           texto: `${r?.deletedAt ? 'Borrado de revisión' : 'Revisión'} de ${nombre.get(r?.carpaId ?? '') ?? '?'} · ${r ? fechaCorta(r.fecha).slice(0, 5) : ''}`,
           link: r ? `/carpas/${r.carpaId}` : '/',
         });
+      } else if (e.entidad === 'eventos') {
+        const ev = await db.eventos.get(e.entityId);
+        out.push({ id: e.entityId, texto: `${ev?.deletedAt ? 'Borrado del evento' : 'Evento'} ${ev?.nombre ?? ''}`, link: ev?.deletedAt ? '/eventos' : `/eventos/${e.entityId}` });
+      } else if (e.entidad === 'eventoCarpas') {
+        const ec = await db.eventoCarpas.get(e.entityId);
+        const ev = ec ? await db.eventos.get(ec.eventoId) : undefined;
+        const cual = ec?.carpaId ? nombre.get(ec.carpaId) : ec?.nombre;
+        out.push({
+          id: e.entityId,
+          texto: `${ec?.deletedAt ? 'Quitar' : 'Carpa'} ${cual ?? '?'}${ec?.carpaId ? '' : ' (prestada)'} ${ec?.deletedAt ? 'de' : 'en'} ${ev?.nombre ?? '?'}`,
+          link: ec ? `/eventos/${ec.eventoId}` : '/eventos',
+        });
       } else {
         const f = await db.fotos.get(e.entityId);
         out.push({ id: e.entityId, texto: `${f?.deletedAt ? 'Borrado de foto' : 'Foto'}${f?.revisionId ? ' de revisión' : ''} de ${nombre.get(f?.carpaId ?? '') ?? '?'}`, link: f ? `/carpas/${f.carpaId}` : '/' });

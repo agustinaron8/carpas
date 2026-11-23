@@ -12,7 +12,7 @@ import { serverNow, tables } from './db/schema.js';
  */
 export const PULL_OVERLAP_MS = 60_000;
 
-const ORDEN: Record<Entidad, number> = { carpas: 0, fotos: 1, revisiones: 2 };
+const ORDEN: Record<Entidad, number> = { carpas: 0, fotos: 1, revisiones: 2, eventos: 3, eventoCarpas: 4 };
 
 function strip<T extends { serverUpdatedAt?: unknown }>(row: T): Omit<T, 'serverUpdatedAt'> {
   const { serverUpdatedAt: _omit, ...rest } = row;

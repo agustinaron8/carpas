@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, CheckSquare, ClipboardList, FileDown, FileText, Plus, RefreshCw, Search, Square, X } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   componentesConFaltante,
@@ -16,7 +16,9 @@ import {
   type Tipo,
 } from '../../shared/model';
 import { EstadoGeneralBadge, PendingBadge } from '../components/badges';
+import { BotonBarra } from '../components/BotonBarra';
 import { FotoImg } from '../components/FotoImg';
+import { Pestanas } from '../components/Pestanas';
 import { FichaDialog, InventarioDialog } from '../components/PdfDialogs';
 import { db } from '../db/dexie';
 import { carpasVivas, ultimasRevisiones } from '../db/queries';
@@ -80,6 +82,7 @@ export function Listado() {
 
   return (
     <div className="space-y-4">
+      <Pestanas />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">
           Carpas <span className="text-base font-normal text-slate-500">({visibles.length})</span>
@@ -249,41 +252,13 @@ export function Listado() {
 
       {dialog && (() => {
         // Desde la selección múltiple van las marcadas; si no, el diálogo ofrece todas las del listado o elegir.
+        const op = (c: Carpa) => ({ id: c.id, codigo: c.codigo, nombre: c.nombre, estadoGeneral: c.estadoGeneral });
         const props = selecting
-          ? { carpaIds: ids }
-          : {
-              carpaIds: [],
-              opciones: visibles.map((c) => ({ id: c.id, codigo: c.codigo, nombre: c.nombre })),
-              filtrado: filtrando || visibles.length < data.carpas.length,
-            };
+          ? { opciones: visibles.filter((c) => selected.has(c.id)).map(op) }
+          : { opciones: visibles.map(op), elegir: true, filtrado: filtrando || visibles.length < data.carpas.length };
         const close = () => setDialog(null);
         return dialog === 'ficha' ? <FichaDialog {...props} onClose={close} /> : <InventarioDialog {...props} onClose={close} />;
       })()}
     </div>
-  );
-}
-
-function BotonBarra({
-  icon,
-  label,
-  onClick,
-  disabled,
-  destacado,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  destacado?: boolean;
-}) {
-  return (
-    <button
-      className={`${destacado ? 'btn-primary' : 'btn-secondary'} h-full flex-col gap-1 px-1 py-2 text-xs leading-tight`}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {icon}
-      <span className="text-center">{label}</span>
-    </button>
   );
 }
