@@ -70,6 +70,15 @@ export const eventoSchema = z.object({
   fechaFin: fecha.nullable(),
   lugar: texto(200),
   notas: texto(4000),
+  integrantes: z
+    .object(
+      Object.fromEntries(
+        TRIBUS.map((t) => [t.key, z.object({ m: z.number().int().min(0).max(1000), v: z.number().int().min(0).max(1000) }).optional()]),
+      ),
+    )
+    .strict()
+    .nullable()
+    .optional(),
 });
 
 export const eventoCarpaSchema = z.object({

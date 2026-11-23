@@ -70,7 +70,7 @@ describe('sync de eventos', () => {
     ]);
     expect(r.every((x) => x.ok)).toBe(true);
     const p = await pull(db, 0);
-    expect(p.eventos).toEqual([ev]);
+    expect(p.eventos).toEqual([{ ...ev, integrantes: null }]);
     expect(p.eventoCarpas).toHaveLength(2);
     expect(p.eventoCarpas.find((x) => x.id === prestada.id)).toEqual(prestada);
   });

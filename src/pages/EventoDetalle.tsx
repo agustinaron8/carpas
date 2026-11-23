@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CalendarDays, FileDown, FileText, ListChecks, MapPin, Pencil, Plus, Undo2 } from 'lucide-react';
+import { CalendarDays, FileDown, FileText, ListChecks, MapPin, Pencil, Plus, Shuffle, Undo2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { TRIBUS, tribuDe, type Carpa, type EventoCarpa } from '../../shared/model';
@@ -113,6 +113,19 @@ export default function EventoDetalle() {
             {(t.m > 0 || t.v > 0) && ` (${t.m} M, ${t.v} V)`}
           </p>
         )}
+        {(() => {
+          const i = evento.integrantes;
+          const m = TRIBUS.reduce((s, x) => s + (i?.[x.key]?.m ?? 0), 0);
+          const v = TRIBUS.reduce((s, x) => s + (i?.[x.key]?.v ?? 0), 0);
+          return m + v > 0 ? (
+            <p className="text-sm text-slate-600">
+              Van {m + v} ({m} M, {v} V)
+            </p>
+          ) : null;
+        })()}
+        <Link to={`/eventos/${evento.id}/simulador`} className="btn-secondary mt-2 w-full">
+          <Shuffle size={18} /> Simular distribución por tribu
+        </Link>
       </div>
 
       <section className="space-y-2">

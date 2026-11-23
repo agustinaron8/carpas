@@ -92,6 +92,7 @@ export const eventos = pgTable(
     fechaFin: text(),
     lugar: text(),
     notas: text(),
+    integrantes: jsonb(),
   },
   (t) => [index('eventos_sync').on(t.serverUpdatedAt)],
 );

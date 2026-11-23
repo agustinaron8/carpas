@@ -36,6 +36,8 @@ Probado en Chromium (390 px, claro y oscuro): crear evento, agregar 7 carpas del
 
 - Personas sugeridas por tribu (23/11): dato fijo de cada carpa (Picunches, Sanavirones, Caminos, Comechingones, Huellas, Dirigentes), se carga en "Editar carpa" y se ve en un desplegable debajo del nombre. No cambia con las revisiones; lo vacío queda "sin cargar". En los eventos: al agregar carpas se puede elegir la tribu y cada una muestra su sugerido (y queda con esa cantidad); al editar, "Sugerido para X: N" con "Usar N"; en la lista avisa "Más de lo sugerido". También sale en el inventario PDF.
 
+- Simulador de distribución (23/11): en cada evento, "Simular distribución por tribu". Se cargan los integrantes por tribu (mujeres y varones aparte; quedan guardados en el evento) y reparte cada grupo en las carpas del evento (propias y prestadas) según las personas sugeridas de cada carpa, sin mezclar tribus ni mujeres con varones en una carpa. Muestra cuántos van en cada carpa, si falta lugar y qué carpas sobran. "Aplicar esta distribución" escribe tribu, M/V y cantidad en las carpas del evento; se puede respetar lo ya asignado a mano.
+
 ## Falta
 - Hito 9: probar en un celular real en modo avión, Lighthouse.
 - A decidir al probar la app: deslizar para actualizar, y Background Sync en Android.

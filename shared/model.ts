@@ -160,7 +160,11 @@ export interface Evento extends Auditable {
   fechaFin: string | null;
   lugar: string | null;
   notas: string | null;
+  /** Cuántos van de cada tribu, mujeres y varones aparte (para el simulador de distribución). */
+  integrantes?: IntegrantesPorTribu | null;
 }
+
+export type IntegrantesPorTribu = Partial<Record<Tribu, { m: number; v: number }>>;
 
 /**
  * Una carpa que se usa en un evento. Con `carpaId` es del inventario; sin él es prestada solo para

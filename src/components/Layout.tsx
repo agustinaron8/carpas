@@ -8,7 +8,7 @@ import { UpdatePrompt } from './UpdatePrompt';
 function pantallaAnterior(path: string): string {
   const m = path.match(/^\/carpas\/([^/]+)\/(editar|revision\/nueva)$/);
   if (m && m[1] !== 'nueva') return `/carpas/${m[1]}`;
-  const ev = path.match(/^\/eventos\/([^/]+)\/editar$/);
+  const ev = path.match(/^\/eventos\/([^/]+)\/(editar|simulador)$/);
   if (ev) return `/eventos/${ev[1]}`;
   if (path.startsWith('/eventos/')) return '/eventos';
   return '/';

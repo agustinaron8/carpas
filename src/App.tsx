@@ -15,6 +15,7 @@ const Ajustes = lazy(() => import('./pages/Ajustes'));
 const Eventos = lazy(() => import('./pages/Eventos'));
 const EventoDetalle = lazy(() => import('./pages/EventoDetalle'));
 const EventoEditar = lazy(() => import('./pages/EventoEditar'));
+const EventoSimulador = lazy(() => import('./pages/EventoSimulador'));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const loc = useLocation();
@@ -53,6 +54,7 @@ export function App() {
               <Route path="eventos/nuevo" element={<EventoEditar />} />
               <Route path="eventos/:id" element={<EventoDetalle />} />
               <Route path="eventos/:id/editar" element={<EventoEditar />} />
+              <Route path="eventos/:id/simulador" element={<EventoSimulador />} />
               <Route path="lote" element={<Lote />} />
               <Route path="pendientes" element={<Pendientes />} />
               <Route path="ajustes" element={<Ajustes />} />
