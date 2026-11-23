@@ -42,6 +42,30 @@ export const CAMPOS_TEXTO = [
 ] as const;
 export type CampoTexto = (typeof CAMPOS_TEXTO)[number]['key'];
 
+/** Ramas del grupo, en el orden en que se muestran. */
+export const TRIBUS = [
+  { key: 'picunches', label: 'Picunches', raiz: 'picun' },
+  { key: 'sanavirones', label: 'Sanavirones', raiz: 'sanav' },
+  { key: 'caminos', label: 'Caminos', raiz: 'camin' },
+  { key: 'comechingones', label: 'Comechingones', raiz: 'comech' },
+  { key: 'huellas', label: 'Huellas', raiz: 'huell' },
+  { key: 'dirigentes', label: 'Dirigentes', raiz: 'diri' },
+] as const;
+export type Tribu = (typeof TRIBUS)[number]['key'];
+export const TRIBU_LABEL = Object.fromEntries(TRIBUS.map((t) => [t.key, t.label])) as Record<Tribu, string>;
+/** Cuántas personas de cada tribu se sugiere que duerman en la carpa. Lo que falta, sin cargar. */
+export type SugeridoPorTribu = Partial<Record<Tribu, number>>;
+
+/**
+ * Tribu de un texto libre ("picunche", "Sanavirón", "diris huellas" → dirigentes). Null si no se reconoce.
+ */
+export function tribuDe(texto: string | null | undefined): Tribu | null {
+  const t = (texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (!t.trim()) return null;
+  if (/\bdiri|\bdirs\b/.test(t)) return 'dirigentes';
+  return TRIBUS.find((x) => x.key !== 'dirigentes' && t.includes(x.raiz))?.key ?? null;
+}
+
 interface Auditable {
   id: string;
   createdAt: number;
@@ -64,6 +88,8 @@ export interface Carpa extends Auditable {
   estadoActual?: EstadoComponentes | null;
   /** Cuándo se editó a mano (ms). Una revisión creada después vuelve a mandar. */
   estadoActualEn?: number | null;
+  /** Dato fijo de la carpa (no cambia con las revisiones). Ver `TRIBUS`. */
+  sugeridoPorTribu?: SugeridoPorTribu | null;
 }
 
 export interface Foto extends Auditable {

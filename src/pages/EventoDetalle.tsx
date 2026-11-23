@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { CalendarDays, FileDown, FileText, ListChecks, MapPin, Pencil, Plus, Undo2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { Carpa, EventoCarpa } from '../../shared/model';
+import { TRIBUS, tribuDe, type Carpa, type EventoCarpa } from '../../shared/model';
 import { EstadoGeneralBadge, PendingBadge } from '../components/badges';
 import { BotonBarra } from '../components/BotonBarra';
 import { AgregarDelInventario, EventoCarpaForm, ListaEventoDialog, type Sugerencias } from '../components/EventoDialogs';
@@ -62,7 +62,7 @@ export default function EventoDetalle() {
       if (nombre && ec.carpaId) enOtros.set(ec.carpaId, [...(enOtros.get(ec.carpaId) ?? []), nombre]);
     }
     const sugerencias: Sugerencias = {
-      tribus: distintos([...data.todasEcs.map((e) => e.tribu), ...data.revs.map((r) => r.tribu)]),
+      tribus: distintos([...TRIBUS.map((t) => t.label), ...data.todasEcs.map((e) => e.tribu), ...data.revs.map((r) => r.tribu)]),
       dirigentes: distintos([...data.todasEcs.map((e) => e.dirigente), ...data.revs.map((r) => r.dirigenteTribu)]),
     };
     const carpasPropias = propias
@@ -129,7 +129,7 @@ export default function EventoDetalle() {
             {propias.map((ec) => {
               const c = carpas.get(ec.carpaId!);
               return (
-                <Fila key={ec.id} ec={ec} onClick={() => setDialogo({ tipo: 'editar', ec })} pendiente={pending.byId.get(ec.id)}>
+                <Fila key={ec.id} ec={ec} carpa={c} onClick={() => setDialogo({ tipo: 'editar', ec })} pendiente={pending.byId.get(ec.id)}>
                   <span className="shrink-0 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-white">{c?.codigo ?? '?'}</span>
                   <span className="min-w-0 flex-1 truncate font-medium">{nombreDe(ec, carpas)}</span>
                   {c && c.deletedAt ? (
@@ -208,16 +208,20 @@ export default function EventoDetalle() {
 
 function Fila({
   ec,
+  carpa,
   onClick,
   pendiente,
   children,
 }: {
   ec: EventoCarpa;
+  carpa?: Carpa;
   onClick: () => void;
   pendiente: { error: string | null } | undefined;
   children: React.ReactNode;
 }) {
   const detalle = [ec.tribu, cantidadTexto(ec), ec.dirigente].filter(Boolean);
+  const tribu = tribuDe(ec.tribu);
+  const sugerido = tribu ? carpa?.sugeridoPorTribu?.[tribu] : undefined;
   const presta = [ec.prestadaPor, ec.prestadaPorTribu && `(${ec.prestadaPorTribu})`].filter(Boolean).join(' ');
   return (
     <li>
@@ -229,6 +233,11 @@ function Fila({
         <span className="mt-0.5 block truncate text-sm text-slate-600">
           {detalle.length ? detalle.join(' · ') : <span className="text-slate-400">Sin tribu ni dirigente asignados</span>}
         </span>
+        {sugerido != null && (ec.cantidad == null || ec.cantidad > sugerido) && (
+          <span className={`mt-0.5 block text-xs ${ec.cantidad == null ? 'text-slate-500' : 'font-medium text-amber-700'}`}>
+            {ec.cantidad == null ? `Sugerido: ${sugerido}` : `Más de lo sugerido (${sugerido})`}
+          </span>
+        )}
         {!ec.carpaId && presta && <span className="mt-0.5 block truncate text-xs text-amber-800">La presta: {presta}</span>}
         {ec.observaciones && <span className="mt-0.5 block truncate text-xs text-slate-500">{ec.observaciones}</span>}
       </button>

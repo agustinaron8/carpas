@@ -15,6 +15,7 @@ import {
 } from '../../shared/model';
 import { EstadoBadge, EstadoGeneralBadge, PendingBadge } from '../components/badges';
 import { FotoImg } from '../components/FotoImg';
+import { SugeridoDesplegable } from '../components/SugeridoPorTribu';
 import { FichaDialog, InventarioDialog } from '../components/PdfDialogs';
 import { useToast } from '../components/Toast';
 import { db, type LocalFoto } from '../db/dexie';
@@ -63,6 +64,8 @@ export default function CarpaDetalle() {
           <Pencil size={16} /> Editar
         </Link>
       </div>
+
+      <SugeridoDesplegable carpaId={carpa.id} sugerido={carpa.sugeridoPorTribu} />
 
       <Fotos carpaId={carpa.id} principalId={carpa.fotoPrincipalId} fotos={fotos} pending={pending} />
 

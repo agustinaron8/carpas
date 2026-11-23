@@ -36,6 +36,13 @@
       "when": 1795470869895,
       "tag": "0004_prestada_por_tribu",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795473274513,
+      "tag": "0005_sugerido_por_tribu",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 // Validación de lo que llega al servidor. El cliente no la importa, así no carga Zod.
 import { z } from 'zod';
 import type { Entidad } from './model.js';
-import { CAMPOS_TEXTO, COMPONENTES, ENTIDADES, ESTADOS, ESTADOS_GENERALES, GENEROS, TIPOS } from './model.js';
+import { CAMPOS_TEXTO, COMPONENTES, ENTIDADES, ESTADOS, ESTADOS_GENERALES, GENEROS, TIPOS, TRIBUS } from './model.js';
 
 const ts = z.number().int().nonnegative();
 const texto = (max: number) => z.string().max(max).nullable();
@@ -32,6 +32,11 @@ export const carpaSchema = z.object({
   // Opcionales: un celular con la versión anterior no los manda, y entonces no se tocan (ver sync.ts).
   estadoActual: z.object(componentes).extend({ estacasCantidad: z.number().int().min(0).max(500).nullable() }).nullable().optional(),
   estadoActualEn: ts.nullable().optional(),
+  sugeridoPorTribu: z
+    .object(Object.fromEntries(TRIBUS.map((t) => [t.key, z.number().int().min(0).max(100).optional()])))
+    .strict()
+    .nullable()
+    .optional(),
 });
 
 export const fotoSchema = z.object({

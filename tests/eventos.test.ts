@@ -4,6 +4,7 @@ import type { Db } from '../server/db/client';
 import { createLocalDb } from '../server/db/local';
 import { pull, push } from '../server/sync';
 import { cantidadTexto, ordenar, rangoFechas, totales } from '../src/lib/eventos';
+import { tribuDe } from '../shared/model';
 
 const evento = (over: Partial<Evento> = {}): Evento => ({
   id: crypto.randomUUID(),
@@ -112,5 +113,27 @@ describe('lista del evento', () => {
     expect(cantidadTexto(rows[2])).toBe('2');
     expect(rangoFechas(ev)).toBe('05/12 al 08/12/2026');
     expect(rangoFechas({ fechaInicio: '2026-12-05', fechaFin: null })).toBe('05/12/2026');
+  });
+});
+
+describe('personas sugeridas por tribu', () => {
+  it('reconoce la tribu en texto libre', () => {
+    expect(['Picunches', 'picunche', 'Sanavirón', 'camino', 'comechingon', 'huellas v', 'diris huellas', 'dirs huellas', 'Dirigentes', 'otra', ''].map(tribuDe)).toEqual([
+      'picunches', 'picunches', 'sanavirones', 'caminos', 'comechingones', 'huellas', 'dirigentes', 'dirigentes', 'dirigentes', null, null,
+    ]);
+  });
+
+  it('se guarda en la carpa y un celular viejo (sin el campo) no lo borra', async () => {
+    const db = await createLocalDb();
+    const c = { ...carpa('C-01', 'Nahuel 23', 7), sugeridoPorTribu: { picunches: 8, dirigentes: 4 } };
+    await push(db, [{ entidad: 'carpas', row: c as never }]);
+    const { sugeridoPorTribu: _s, ...viejo } = c;
+    void _s;
+    await push(db, [{ entidad: 'carpas', row: { ...viejo, nombre: 'Otro', updatedAt: 2 } as never }]);
+    const [p] = (await pull(db, 0)).carpas;
+    expect(p.nombre).toBe('Otro');
+    expect(p.sugeridoPorTribu).toEqual({ picunches: 8, dirigentes: 4 });
+    const [mal] = await push(db, [{ entidad: 'carpas', row: { ...c, sugeridoPorTribu: { scouts: 3 }, updatedAt: 3 } as never }]);
+    expect(mal.ok).toBe(false);
   });
 });

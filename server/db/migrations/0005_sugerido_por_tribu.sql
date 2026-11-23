@@ -1,0 +1,1 @@
+ALTER TABLE "carpas" ADD COLUMN "sugerido_por_tribu" jsonb;

@@ -3,7 +3,7 @@
 import { CheckSquare, Search, Square, Trash2 } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { GENERO_LABEL, GENEROS, type Carpa, type Evento, type EventoCarpa, type Genero } from '../../shared/model';
+import { GENERO_LABEL, GENEROS, TRIBU_LABEL, TRIBUS, tribuDe, type Carpa, type Evento, type EventoCarpa, type Genero, type Tribu } from '../../shared/model';
 import { db } from '../db/dexie';
 import { deleteEventoCarpa, eventoCarpaVacia, idEventoCarpa, saveEventoCarpas } from '../db/repo';
 import type { OrdenLista } from '../lib/eventos';
@@ -34,6 +34,7 @@ export function AgregarDelInventario({
   const [q, setQ] = useState('');
   const [elegidas, setElegidas] = useState<Set<string>>(new Set());
   const [guardando, setGuardando] = useState(false);
+  const [tribu, setTribu] = useState<Tribu | ''>('');
   const porId = useMemo(() => new Map(disponibles.map((c) => [c.id, c])), [disponibles]);
   const visibles = useMemo(() => {
     const nq = normalizar(q.trim());
@@ -57,7 +58,13 @@ export function AgregarDelInventario({
         const id = await idEventoCarpa(evento.id, carpaId);
         // Si se había quitado, vuelve con lo que tenía anotado.
         const antes = await db.eventoCarpas.get(id);
-        rows.push(antes ? { ...antes, deletedAt: null } : eventoCarpaVacia(evento.id, id, carpaId));
+        const row = antes ? { ...antes, deletedAt: null } : eventoCarpaVacia(evento.id, id, carpaId);
+        // Con tribu elegida: queda asignada y con la cantidad sugerida (si la carpa la tiene cargada).
+        if (tribu) {
+          row.tribu = TRIBU_LABEL[tribu];
+          row.cantidad = porId.get(carpaId)?.sugeridoPorTribu?.[tribu] ?? row.cantidad;
+        }
+        rows.push(row);
       }
       await saveEventoCarpas(rows);
       toast(`${plural(rows.length, 'carpa agregada', 'carpas agregadas')}`);
@@ -75,6 +82,20 @@ export function AgregarDelInventario({
         ) : (
           <>
             <FiltroEstado eleccion={eleccion} />
+            <div>
+              <label className="label" htmlFor="ag-tribu">
+                Para qué tribu
+              </label>
+              <select id="ag-tribu" className="input" value={tribu} onChange={(e) => setTribu(e.target.value as Tribu | '')}>
+                <option value="">Sin elegir (se asigna después)</option>
+                {TRIBUS.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              {tribu && <p className="mt-1 text-xs text-slate-500">Se agregan con esa tribu y la cantidad sugerida de cada carpa.</p>}
+            </div>
             <div className="rounded-lg border border-slate-300">
               <div className="flex items-center gap-2 border-b border-slate-200 p-2">
                 <div className="relative flex-1">
@@ -113,12 +134,20 @@ export function AgregarDelInventario({
                             <span className="min-w-0 flex-1 truncate">{o.nombre}</span>
                             <EstadoGeneralBadge estado={o.estadoGeneral} />
                           </span>
-                          {(c?.capacidad || otros) && (
-                            <span className="mt-0.5 block text-xs text-slate-500">
-                              {c?.capacidad ? `${c.capacidad} pers.` : ''}
-                              {otros && <span className="font-medium text-amber-700">{c?.capacidad ? ' · ' : ''}También en {otros.join(', ')}</span>}
-                            </span>
-                          )}
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {tribu ? (
+                              c?.sugeridoPorTribu?.[tribu] != null ? (
+                                <span className="font-semibold text-green-800">
+                                  Sugerido: {c.sugeridoPorTribu[tribu]} {TRIBU_LABEL[tribu]}
+                                </span>
+                              ) : (
+                                <span>Sin sugerido para {TRIBU_LABEL[tribu]}</span>
+                              )
+                            ) : (
+                              <ResumenSugerido c={c} />
+                            )}
+                            {otros && <span className="block font-medium text-amber-700">También en {otros.join(', ')}</span>}
+                          </span>
                         </span>
                       </label>
                     </li>
@@ -135,6 +164,13 @@ export function AgregarDelInventario({
       </div>
     </Modal>
   );
+}
+
+/** "8 Pic · 7 San · 4 Diri", o la capacidad si no hay nada cargado. */
+function ResumenSugerido({ c }: { c: Carpa | undefined }) {
+  const partes = TRIBUS.filter((t) => c?.sugeridoPorTribu?.[t.key] != null).map((t) => `${c!.sugeridoPorTribu![t.key]} ${t.label.slice(0, 4)}.`);
+  if (partes.length) return <span>{partes.join(' · ')}</span>;
+  return <span>{c?.capacidad ? `${c.capacidad} pers. · ` : ''}Sin sugerido por tribu</span>;
 }
 
 export interface Sugerencias {
@@ -205,6 +241,9 @@ export function EventoCarpaForm({
     onClose();
   }
 
+  const tribuReconocida = tribuDe(f.tribu);
+  const sugerido = tribuReconocida && carpa?.sugeridoPorTribu?.[tribuReconocida];
+  const cant = entero(f.cantidad);
   const titulo = nueva ? 'Carpa prestada' : prestada ? f.nombre || 'Carpa prestada' : `${carpa?.codigo ?? ''} · ${carpa?.nombre ?? 'Carpa'}`;
   return (
     <Modal title={titulo} onClose={onClose}>
@@ -302,6 +341,25 @@ export function EventoCarpaForm({
               <option key={t} value={t} />
             ))}
           </datalist>
+          {carpa && tribuReconocida && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
+              {sugerido != null ? (
+                <>
+                  <span className={cant != null && cant > sugerido ? 'font-medium text-amber-700' : 'text-green-800'}>
+                    Sugerido para {TRIBU_LABEL[tribuReconocida]}: {sugerido}
+                    {cant != null && cant > sugerido && ' (están poniendo más)'}
+                  </span>
+                  {cant !== sugerido && (
+                    <button type="button" className="font-medium text-green-800 underline" onClick={() => set('cantidad', String(sugerido))}>
+                      Usar {sugerido}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="text-slate-500">Esta carpa no tiene cargado el sugerido para {TRIBU_LABEL[tribuReconocida]}.</span>
+              )}
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

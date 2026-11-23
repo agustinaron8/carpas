@@ -8,6 +8,7 @@ import {
   ESTADO_GENERAL_LABEL,
   ESTADO_LABEL,
   TIPO_LABEL,
+  TRIBUS,
   type Carpa,
   type EstadoComponentes,
   type Revision,
@@ -112,6 +113,18 @@ export async function inventarioDoc(carpaIds: string[], opts: InventarioOpts): P
           ],
           margin: [0, 3, 0, 0],
         },
+        TRIBUS.some((t) => c.sugeridoPorTribu?.[t.key] != null)
+          ? {
+              text: [
+                { text: 'Sugerido por tribu: ', bold: true },
+                TRIBUS.filter((t) => c.sugeridoPorTribu?.[t.key] != null)
+                  .map((t) => `${c.sugeridoPorTribu![t.key]} ${t.label}`)
+                  .join(' · '),
+              ],
+              fontSize: 9,
+              margin: [0, 3, 0, 0],
+            }
+          : { text: '' },
         c.notas ? { text: c.notas, italics: true, color: '#92400e', margin: [0, 4, 0, 0] } : { text: '' },
         {
           text: [

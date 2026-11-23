@@ -29,6 +29,7 @@ export const carpas = pgTable(
     fotoPrincipalId: uuid(),
     estadoActual: jsonb(),
     estadoActualEn: ms(),
+    sugeridoPorTribu: jsonb(),
   },
   (t) => [
     uniqueIndex('carpas_codigo_vivo').on(t.codigo).where(sql`${t.deletedAt} is null`),

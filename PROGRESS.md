@@ -34,6 +34,8 @@ Revisión de exports (22/11), en local y en producción, abriendo cada PDF y ver
 
 Probado en Chromium (390 px, claro y oscuro): crear evento, agregar 7 carpas del inventario, editar dos, agregar una prestada, lista PDF (revisada a ojo), fichas del evento y pendientes. 20 tests.
 
+- Personas sugeridas por tribu (23/11): dato fijo de cada carpa (Picunches, Sanavirones, Caminos, Comechingones, Huellas, Dirigentes), se carga en "Editar carpa" y se ve en un desplegable debajo del nombre. No cambia con las revisiones; lo vacío queda "sin cargar". En los eventos: al agregar carpas se puede elegir la tribu y cada una muestra su sugerido (y queda con esa cantidad); al editar, "Sugerido para X: N" con "Usar N"; en la lista avisa "Más de lo sugerido". También sale en el inventario PDF.
+
 ## Falta
 - Hito 9: probar en un celular real en modo avión, Lighthouse.
 - A decidir al probar la app: deslizar para actualizar, y Background Sync en Android.

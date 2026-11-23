@@ -15,8 +15,10 @@ import {
   type EstadoComponentes,
   type EstadoGeneral,
   type Tipo,
+  type Tribu,
 } from '../../shared/model';
 import { ComponentesEditor } from '../components/ComponentesEditor';
+import { aTexto, deTexto, SugeridoEditor } from '../components/SugeridoPorTribu';
 import { useToast } from '../components/Toast';
 import { db } from '../db/dexie';
 import { carpasVivas, sugerirCodigo, ultimaRevision } from '../db/queries';
@@ -33,6 +35,7 @@ interface FormState {
   capacidad: string;
   estadoGeneral: EstadoGeneral;
   notas: string;
+  sugerido: Partial<Record<Tribu, string>>;
 }
 
 export default function CarpaEditar() {
@@ -67,12 +70,18 @@ export default function CarpaEditar() {
             capacidad: existente.capacidad?.toString() ?? '',
             estadoGeneral: existente.estadoGeneral,
             notas: existente.notas ?? '',
+            sugerido: aTexto(existente.sugeridoPorTribu),
           }
-        : { codigo: sugerirCodigo(todas), nombre: '', tipo: 'canadiense', capacidad: '', estadoGeneral: 'lista', notas: '' },
+        : { codigo: sugerirCodigo(todas), nombre: '', tipo: 'canadiense', capacidad: '', estadoGeneral: 'lista', notas: '', sugerido: aTexto(null) },
     );
   }, [form, todas, existente, id, ultima]);
 
   if (!form || !todas || !estado || !estadoInicial) return null;
+  if (location.hash === '#sugerido')
+    requestAnimationFrame(() => {
+      document.getElementById('sugerido')?.scrollIntoView({ block: 'center' });
+      history.replaceState(history.state, '', location.pathname);
+    });
   const actual = existente ? estadoActual(existente, ultima ?? undefined) : undefined;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm({ ...form, [k]: v });
   const syncError = id ? pending.byId.get(id)?.error : null;
@@ -96,6 +105,7 @@ export default function CarpaEditar() {
       estadoGeneral: form.estadoGeneral,
       notas: form.notas.trim() || null,
       fotoPrincipalId: existente?.fotoPrincipalId ?? null,
+      sugeridoPorTribu: deTexto(form.sugerido),
     };
     // El estado solo se guarda como edición a mano si cambió (si no, sigue mandando la última revisión).
     const cambioEstado = CAMPOS_ESTADO.some((k) => (estado[k] ?? null) !== (estadoInicial[k] ?? null));
@@ -191,6 +201,7 @@ export default function CarpaEditar() {
         </label>
         <textarea id="notas" className="input min-h-20" value={form.notas} onChange={(e) => set('notas', e.target.value)} placeholder="Ej.: no tiene bolsa de parantes" />
       </div>
+      <SugeridoEditor valor={form.sugerido} onChange={(v) => set('sugerido', v)} />
       {!existente && (
         <div>
           <span className="label">Fotos</span>

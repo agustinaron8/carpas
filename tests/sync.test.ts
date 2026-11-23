@@ -30,7 +30,7 @@ describe('push/pull', () => {
     const r = await push(db, [{ entidad: 'carpas', row: c as never }]);
     expect(r).toEqual([{ entidad: 'carpas', id: c.id, ok: true }]);
     const p = await pull(db, 0);
-    expect(p.carpas).toEqual([{ ...c, estadoActual: null, estadoActualEn: null }]);
+    expect(p.carpas).toEqual([{ ...c, estadoActual: null, estadoActualEn: null, sugeridoPorTribu: null }]);
     expect(p.cursor).toBeGreaterThan(0);
   });
 
